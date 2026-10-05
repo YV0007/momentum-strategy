@@ -1,0 +1,35 @@
+# Ablation ladder: the paper's final strategy built up one decision at a time, to see what
+# each piece contributes. Evaluated on the TRAIN period only (scripts/03_run_backtests.py).
+# Steps marked "alternative" or "control" branch off the main ladder instead of extending it.
+
+s1_open_band:               # breakout of a noise area around the OPEN only; hold until the opposite band; 1x
+  stop: opposite_band
+  sizing: fixed
+  gap_adjust: false
+
+s2_gap_adjusted:            # + gap adjustment: band around max/min(open, previous close) = paper base (Table 1)
+  stop: opposite_band
+  sizing: fixed
+
+s3_band_stop:               # + stop at the CURRENT band instead of the opposite one (paper Fig. 5a)
+  stop: band
+  sizing: fixed
+
+s3b_vwap_stop_only:         # alternative to s3: VWAP as the only trailing stop (paper FAQ Q22)
+  stop: vwap
+  sizing: fixed
+
+s4_band_and_vwap_stop:      # + VWAP: stop = max(band, VWAP) for longs (paper Table 2, second row)
+  stop: band_vwap
+  sizing: fixed
+
+s5_constant_leverage:       # control: s4 at a constant 2.66x = the final version's average leverage on train
+  stop: band_vwap
+  sizing: fixed
+  leverage: 2.66
+
+s6_vol_target:              # + volatility-target sizing: min(4, 2% / 14-day vol) = paper final (Table 3)
+  stop: band_vwap
+  sizing: vol_target
+  target_vol: 0.02
+  max_leverage: 4

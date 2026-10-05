@@ -1,0 +1,27 @@
+# Phase 0: fixed research rules. Set before looking at any backtest result;
+# every strategy (paper versions and own) is evaluated under exactly these.
+
+split:
+  train_start: "2016-01-01"
+  train_end: "2022-12-31"
+  test_start: "2023-01-01"        # run in scripts/06_run_test.py. SECOND USE (decided 2026-10-05):
+                                  # first used for the paper versions and the retired GEX attempt;
+                                  # the next own version is tested here once more and reported as a
+                                  # second use. All design work stays on train.
+  post_publication_start: "2024-05-10"   # paper's first version; reported separately
+
+capital:
+  initial_aum: 100000
+
+costs:                            # per share, every fill (paper section 4.6)
+  commission: 0.0035              # Interactive Brokers entry-level rate
+  slippage: 0.001                 # paper's live-trading estimate
+
+metrics:
+  trading_days_per_year: 252
+  risk_free_rate: 0.0
+  required: [sharpe, annual_return, annual_volatility]
+
+success:                          # judged on the test period
+  min_sharpe: 0.5
+  must_beat: [buy_and_hold, placebo]

@@ -1,0 +1,42 @@
+# Phase 3: named strategy configs. Each one is the same engine with different settings.
+#
+# stop:    opposite_band  long until price < lower band (then flip short), and vice versa
+#          band_vwap      long only while price > max(upper band, VWAP); short mirrored
+# sizing:  fixed          100% of AUM
+#          vol_target     AUM * min(max_leverage, target_vol / 14-day daily vol)
+
+base:                       # paper Table 1
+  stop: opposite_band
+  sizing: fixed
+
+vwap_stop:                  # paper Table 2, second row
+  stop: band_vwap
+  sizing: fixed
+
+final:                      # paper Table 3, the headline strategy
+  stop: band_vwap
+  sizing: vol_target
+  target_vol: 0.02
+  max_leverage: 4
+
+# ---- own versions (Phase 6, docs/own_version_research.md). Same entries, stops and daily
+# volatility target as `final`; each trade is additionally scaled at entry by an intraday
+# multiplier in [size_floor, size_cap], held to its exit, total leverage still <= max_leverage.
+
+own_turbulence:             # MAIN candidate: multiplier = 1 / (realized vol so far today / its 14-day normal)
+  stop: band_vwap
+  sizing: vol_target
+  target_vol: 0.02
+  max_leverage: 4
+  intraday_sizing: turbulence
+  size_floor: 0.5
+  size_cap: 1.5
+
+own_ml_vol:                 # CHALLENGER: multiplier = 1 / gradient-boosting forecast of rest-of-day vol vs normal
+  stop: band_vwap           # model settings: config/ml_sizing.yaml; fitted once on the whole train period
+  sizing: vol_target
+  target_vol: 0.02
+  max_leverage: 4
+  intraday_sizing: ml_vol
+  size_floor: 0.5
+  size_cap: 1.5
