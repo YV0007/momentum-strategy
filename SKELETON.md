@@ -15,12 +15,14 @@ SPY_Momentum_str/
 │   ├── research.yaml            # P0  fixed rules: split dates, costs, metrics, success criteria
 │   ├── strategies.yaml          # P3  named configs: base, vwap_stop, final, own_turbulence, own_ml_vol
 │   ├── ml_sizing.yaml           # P6  ML volatility forecast settings (written by 05a, frozen)
+│   ├── universe.yaml            # P9  the 16 ETFs of the multi-asset test and their asset class
 │   ├── ablation.yaml            # P3  ladder: base → final, one decision at a time
 │   └── paper_monthly_returns.csv  #   paper's published monthly returns (replication reference)
 │
 ├── data/                        #     gitignored, rebuilt by scripts
-│   ├── raw/                     # P1  SPY_1min_<year>.parquet, calendar, Yahoo daily + dividends, VIX
-│   └── processed/               # P1–P2 spy_minute/daily.parquet, features_minute/daily.parquet
+│   ├── raw/                     # P1  <SYMBOL>_1min_<year>.parquet, calendar, Yahoo daily + dividends, VIX,
+│   │                            #     options/ (Cboe VIX family, SqueezeMetrics GEX; Stage 7 screen)
+│   └── processed/<SYMBOL>/      # P1–P2 minute, daily, features_minute, features_daily (.parquet)
 │
 ├── src/
 │   ├── config.py                # P0  loads YAML into StrategyConfig / ResearchConfig dataclasses
@@ -46,6 +48,7 @@ SPY_Momentum_str/
 │   │   ├── trade_features.py    # P6  market situation at each trade's entry (+ ML dataset later)
 │   │   ├── replication.py       #     our returns vs the paper's monthly table
 │   │   ├── paper_tables.py      # P8  paper Section 4 + FAQ analyses (patterns, weekday, legs, Table 4)
+│   │   ├── portfolio.py         # P9  equal-capital portfolio of single-ETF sleeves, diversification
 │   │   ├── ablation.py          # P3  runs the ladder → results/train_ablation.md
 │   │   └── report.py            # P4  full evaluation of one period → tables, figures, report
 │   ├── strategies/
@@ -54,15 +57,16 @@ SPY_Momentum_str/
 │   └── plots.py                 # P4–P8 equity, drawdown, metric bars, heatmaps
 │
 ├── scripts/                     #     one command per step, run in order
-│   ├── 01_download_data.py      # P1
-│   ├── 02_build_dataset.py      # P1–P2
+│   ├── 01_download_data.py      # P1  every symbol of the universe (or --symbols)
+│   ├── 02_build_dataset.py      # P1–P2 per symbol; quality reports: docs/ (SPY), results/data_quality/
 │   ├── 03_run_backtests.py      # P3–P4 run + evaluate + ablation, train only
 │   ├── 04_checkpoint.py         # P5  diagnostics on train only → results/checkpoint_report.md
 │   ├── 04b_diagnose.py          # P6  Stage 1: P&L split, entry features, worst trades (train)
 │   ├── 05a_tune_ml_sizing.py    # P6  choose the ML settings on train (forecast accuracy only)
 │   ├── 05_own_strategy.py       # P6  own versions vs final: walk-forward blocks, years, cost stress
 │   ├── 06_run_test.py           # P7  test + post-publication evaluation, replication report
-│   └── 07_robustness.py         # P8  every paper variation and analysis, train + test
+│   ├── 07_robustness.py         # P8  every paper variation and analysis, train + test
+│   └── 08_multi_asset.py        # P9  three versions on 16 ETFs, equal-capital portfolio (--period)
 │
 ├── tests/                       # run with `pytest`
 │   ├── conftest.py              #     synthetic market + real-data fixture
@@ -75,7 +79,8 @@ SPY_Momentum_str/
 │   ├── test_diagnostics.py      #     diagnostics reconcile with the backtest
 │   ├── test_trade_features.py   #     entry features have no look-ahead
 │   ├── test_intraday_sizing.py  #     per-trade sizing, whole-share accounting, ML sees no test data
-│   └── test_paper_variants.py   #     tiered commission, I-Star impact, daily patterns
+│   ├── test_paper_variants.py   #     tiered commission, I-Star impact, daily patterns
+│   └── test_multi_asset.py      #     portfolio arithmetic, pooled ML sees no future blocks
 │
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb  # scratch work
