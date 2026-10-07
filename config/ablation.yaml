@@ -33,3 +33,9 @@ s6_vol_target:              # + volatility-target sizing: min(4, 2% / 14-day vol
   sizing: vol_target
   target_vol: 0.02
   max_leverage: 4
+
+s6b_vwap_stop_vol_target:   # alternative to s6: VWAP-only stop with volatility-target sizing (paper FAQ Q22)
+  stop: vwap
+  sizing: vol_target
+  target_vol: 0.02
+  max_leverage: 4

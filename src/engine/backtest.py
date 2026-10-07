@@ -16,8 +16,7 @@ import numpy as np
 import pandas as pd
 
 from src import features
-from src.config import (DAILY_FILE, FEATURES_DAILY_FILE, FEATURES_MINUTE_FILE, MINUTE_FILE,
-                        ResearchConfig, StrategyConfig)
+from src.config import SYMBOL, ResearchConfig, StrategyConfig, processed_files
 from src.engine import costs, rules, sizing
 
 
@@ -29,9 +28,9 @@ class MarketData:
     daily_feats: pd.DataFrame
 
     @classmethod
-    def load(cls) -> "MarketData":
-        return cls(*(pd.read_parquet(f) for f in
-                     (MINUTE_FILE, DAILY_FILE, FEATURES_MINUTE_FILE, FEATURES_DAILY_FILE)))
+    def load(cls, symbol: str = SYMBOL) -> "MarketData":
+        files = processed_files(symbol)
+        return cls(*(pd.read_parquet(files[name]) for name in ("minute", "daily", "features_minute", "features_daily")))
 
 
 @dataclass
@@ -79,6 +78,8 @@ class Prepared:
     leverage: pd.Series
     day_open: np.ndarray
     size: np.ndarray          # intraday size multiplier at each decision, already within the leverage cap
+    adv: np.ndarray           # previous 30 days' average daily volume (I-Star market impact only)
+    vol_annual: np.ndarray    # previous 30 days' annualized volatility (I-Star market impact only)
 
     def rule_positions(self) -> np.ndarray:
         """The rule's direction (+1/-1/0), flat outside the session and on non-tradable days."""
@@ -116,9 +117,10 @@ def prepare(config: StrategyConfig, data: MarketData,
 
     # ---- what is observed at each decision (end of bar k-1) and the fill price (open of bar k)
     feats = data.minute_feats
-    if config.vm != 1.0 or not config.gap_adjust:
-        feats = feats.assign(**features.noise_bands(data.minute, data.daily, feats["sigma"],
-                                                    config.vm, config.gap_adjust))
+    if config.vm != 1.0 or not config.gap_adjust or config.lookback != features.LOOKBACK:
+        sigma = (feats["sigma"] if config.lookback == features.LOOKBACK
+                 else features.noise_sigma(data.minute, data.daily, config.lookback))
+        feats = feats.assign(**features.noise_bands(data.minute, data.daily, sigma, config.vm, config.gap_adjust))
     at_decision = {col: _at_minutes(feats[col], data.minute, ks - 1, days) for col in ("upper", "lower", "vwap")}
     price = _at_minutes(data.minute["close"], data.minute, ks - 1, days)
     fill = _at_minutes(data.minute["open"], data.minute, ks, days)
@@ -139,19 +141,27 @@ def prepare(config: StrategyConfig, data: MarketData,
     size = pd.DataFrame(multiplier, index=data.daily.index).reindex(days).to_numpy()
     size = np.minimum(size, config.max_leverage / lev.to_numpy()[:, None])
     size = np.where(np.isfinite(size), size, 1.0)
-    return Prepared(config, days, ks, price, at_decision["upper"], at_decision["lower"],
-                    at_decision["vwap"], legs, in_session, tradable, lev, daily["open"].to_numpy(), size)
+
+    # ---- liquidity and volatility known at the open, for the I-Star cost model
+    window = data.daily[["volume", "ret_cc"]].rolling(costs.IMPACT_DAYS, min_periods=2)
+    adv = window.mean()["volume"].shift(1).reindex(days).to_numpy()
+    vol_annual = (window.std()["ret_cc"].shift(1) * np.sqrt(252)).reindex(days).to_numpy()
+    return Prepared(config, days, ks, price, at_decision["upper"], at_decision["lower"], at_decision["vwap"],
+                    legs, in_session, tradable, lev, daily["open"].to_numpy(), size, adv, vol_annual)
 
 
 def simulate(prep: Prepared, position: np.ndarray, research: ResearchConfig,
              with_trades: bool = True) -> BacktestResult:
     """Account for a (days x decision points) position matrix: P&L, costs, compounding.
     Positions are in units of the day's share count; +1/-1/0 everywhere for the paper versions,
-    fractions for the own versions (rounded down to whole shares)."""
+    fractions for the own versions (rounded down to whole shares). With the default flat costs
+    and whole positions, P&L per share is computed for all days at once; otherwise day by day,
+    fill by fill (engine/costs.py)."""
     leg_moves = np.diff(prep.legs, axis=1)
-    whole = np.isin(position, (-1.0, 0.0, 1.0)).all()
+    flat_costs = research.slippage_model == "fixed" and not research.commission_tiered
+    fast = flat_costs and np.isin(position, (-1.0, 0.0, 1.0)).all()
     prev = np.hstack([np.zeros((len(prep.days), 1)), position])
-    if whole:   # one share count per day: P&L per share for all days at once
+    if fast:    # one share count per day: P&L per share for all days at once
         pnl_per_share = (position * leg_moves).sum(axis=1)
         units_traded = np.abs(np.diff(prev, axis=1)).sum(axis=1) + np.abs(position[:, -1])
         in_market = np.abs(position).max(axis=1)
@@ -161,28 +171,31 @@ def simulate(prep: Prepared, position: np.ndarray, research: ResearchConfig,
     # ---- compound day by day: share count is fixed at the open from yesterday's AUM
     aum = research.initial_aum
     lev = prep.leverage.to_numpy()
-    rows = []
+    rows, traded_history = [], []
     for i, day in enumerate(prep.days):
         n = sizing.shares(aum, lev[i], prep.day_open[i]) if prep.tradable[i] else 0
-        if whole:
+        if fast:
             gross, traded, peak = n * pnl_per_share[i], n * units_traded[i], n * in_market[i]
+            cost = costs.trading_cost(traded, research.cost_per_share)
         else:
-            held = np.floor(n * abs_pos[i] + 1e-9) * sign[i]           # whole shares held on each leg
-            gross = held @ leg_moves[i]
-            traded = np.abs(np.diff(held, prepend=0.0)).sum() + abs(held[-1])
-            peak = np.abs(held).max()
-        cost = costs.trading_cost(traded, research.cost_per_share)
+            held = np.floor(n * abs_pos[i] + 1e-9) * sign[i]             # whole shares held on each leg
+            fills = np.abs(np.diff(held, prepend=0.0, append=0.0))        # at each decision, then the close
+            gross, traded, peak = held @ leg_moves[i], fills.sum(), np.abs(held).max()
+            rate = costs.commission_rate(research, sum(traded_history[-costs.TIER_DAYS:]))
+            cost = rate * traded + costs.slippage(research, fills, prep.legs[i], prep.adv[i], prep.vol_annual[i])
+        traded_history.append(traded)
         start_aum, aum = aum, aum + gross - cost
         rows.append((day, start_aum, aum, (aum - start_aum) / start_aum, n, peak,
-                     lev[i] if prep.tradable[i] else 0.0, gross, cost))
+                     lev[i] if prep.tradable[i] else 0.0, gross, cost, traded))
     result = pd.DataFrame(rows, columns=["date", "aum_start", "aum", "ret", "shares", "peak_shares",
-                                         "leverage", "pnl_gross", "costs"]).set_index("date")
+                                         "leverage", "pnl_gross", "costs", "shares_traded"]).set_index("date")
 
     # A trade starts wherever the position becomes non-zero or changes sign.
     starts = (position != 0) & (position != prev[:, :-1])
     result["trades"] = starts.sum(axis=1)
-    trades = (trade_log(position, prep.legs, prep.ks, prep.days, result["shares"].to_numpy(),
-                        research.cost_per_share) if with_trades else pd.DataFrame())
+    cost_per_share = (result["costs"] / result["shares_traded"]).fillna(0.0).to_numpy()
+    trades = (trade_log(position, prep.legs, prep.ks, prep.days, result["shares"].to_numpy(), cost_per_share)
+              if with_trades else pd.DataFrame())
     return BacktestResult(prep.config, result, trades)
 
 
@@ -193,9 +206,10 @@ def run(config: StrategyConfig, research: ResearchConfig, data: MarketData,
 
 
 def trade_log(position: np.ndarray, legs: np.ndarray, ks: np.ndarray, days: pd.Index,
-              shares: np.ndarray, cost_per_share: float) -> pd.DataFrame:
+              shares: np.ndarray, cost_per_share: np.ndarray) -> pd.DataFrame:
     """One row per trade: a run of the same non-zero position within a day. `size` is the
-    position in units of the day's share count (1 for the paper versions)."""
+    position in units of the day's share count (1 for the paper versions). Each trade pays its
+    day's average cost per share on entry and exit, so the trades add up to the daily P&L."""
     decision_time = clock(ks) + ["close"]
     rows = []
     for d, j in zip(*np.nonzero(position)):
@@ -209,6 +223,6 @@ def trade_log(position: np.ndarray, legs: np.ndarray, ks: np.ndarray, days: pd.I
         side, size = np.sign(value), abs(value)
         n = np.floor(shares[d] * size + 1e-9)            # whole shares, as in simulate
         rows.append((days[d], decision_time[j], decision_time[exit_j], int(side), size, n, entry, exit_,
-                     n * side * (exit_ - entry) - 2 * n * cost_per_share))
+                     n * side * (exit_ - entry) - 2 * n * cost_per_share[d]))
     return pd.DataFrame(rows, columns=["date", "entry_time", "exit_time", "side", "size", "shares",
                                        "entry_price", "exit_price", "pnl"])

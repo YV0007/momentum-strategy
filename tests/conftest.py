@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from src.config import DAILY_FILE, MINUTE_FILE, NY_TZ
+from src.config import NY_TZ, processed_files
 from src.data.clean import build_daily_table
 
 
@@ -51,9 +51,10 @@ def make_market(n_days: int = 30, seed: int = 0, dividend_days: dict | None = No
 @pytest.fixture(scope="session")
 def real_market():
     """First ~60 trading days of the real processed data (skips if not built yet)."""
-    if not MINUTE_FILE.exists():
+    files = processed_files("SPY")
+    if not files["minute"].exists():
         pytest.skip("processed data not built; run scripts/02_build_dataset.py")
-    daily = pd.read_parquet(DAILY_FILE).iloc[:60]
-    minute = pd.read_parquet(MINUTE_FILE)
+    daily = pd.read_parquet(files["daily"]).iloc[:60]
+    minute = pd.read_parquet(files["minute"])
     minute = minute[minute["date"] <= daily.index[-1]]
     return minute, daily

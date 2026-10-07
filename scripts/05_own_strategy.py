@@ -72,10 +72,12 @@ def main() -> None:
     ret = {name: r.daily["ret"] for name, r in results.items()}
     stressed = {name: backtest(name, replace(research, slippage=STRESS_SLIPPAGE)).daily["ret"] for name in names}
 
-    for name in args.candidate:
-        span = blocks_days if name in oos_only else days
-        log_run(strategies[name], "train", str(span[0].date()), end, metrics.summary(results[name].daily.loc[span]),
-                note="walk-forward blocks only (ML fitted before each block)" if name in oos_only else "")
+    for name in args.candidate:     # the ML has no whole-train result: its own period label, so the
+        if name in oos_only:        # Deflated Sharpe never compares Sharpes from different windows
+            log_run(strategies[name], "train_blocks", str(blocks_days[0].date()), end,
+                    metrics.summary(results[name].daily.loc[blocks_days]), note="ML fitted before each block")
+        else:
+            log_run(strategies[name], "train", start, end, metrics.summary(results[name].daily))
 
     # ---- 1. headline: the walk-forward blocks together (every version out of sample there)
     rows = []

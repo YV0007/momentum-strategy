@@ -4,6 +4,8 @@ Colors follow one fixed assignment so a strategy has the same color in every cha
 paper versions take the first categorical slots, benchmarks are neutral grays.
 """
 
+import textwrap
+
 import matplotlib
 
 matplotlib.use("Agg")
@@ -15,12 +17,15 @@ from src.config import FIGURES_DIR  # noqa: E402
 
 COLORS = {
     "final": "#2a78d6", "vwap_stop": "#eb6834", "base": "#1baf7a", "own": "#4a3aa7",
-    "own_turbulence": "#4a3aa7", "own_ml_vol": "#c2407f",
+    "own_turbulence": "#4a3aa7", "own_ml_vol": "#c2407f", "long_only": "#1d8a5b", "short_only": "#c2402f",
+    "spy_alone": "#e0a106",
     "buy_and_hold": "#52514e", "open_to_close": "#a3a29d",
 }
 LABELS = {"final": "Final (VWAP stop + vol sizing)", "vwap_stop": "VWAP stop, 1x",
           "base": "Base (opposite band), 1x", "own": "Own strategy",
           "own_turbulence": "Own A: turbulence sizing", "own_ml_vol": "Own B: ML volatility sizing",
+          "long_only": "Long trades only", "short_only": "Short trades only",
+          "spy_alone": "SPY alone (paper's final)",
           "buy_and_hold": "SPY buy & hold", "open_to_close": "SPY open-to-close"}
 TEXT, MUTED, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 
@@ -86,7 +91,8 @@ def metric_bars(table: pd.DataFrame, title: str, name: str) -> None:
     periods = table.index.get_level_values(1).unique() if has_periods else [None]
     width = 0.8 / len(periods)
 
-    fig, axes = plt.subplots(1, 3, figsize=(13, 4.2))
+    stacked = len(strategies) > 5          # many bars: one full-width panel per metric
+    fig, axes = plt.subplots(3, 1, figsize=(12, 11)) if stacked else plt.subplots(1, 3, figsize=(13, 4.2))
     for ax, (col, label, fmt) in zip(axes, metrics):
         for p_i, period in enumerate(periods):
             values = [table.loc[(s, period), col] if has_periods else table.loc[s, col] for s in strategies]
@@ -98,15 +104,52 @@ def metric_bars(table: pd.DataFrame, title: str, name: str) -> None:
                             xytext=(0, 2 if v >= 0 else -10), textcoords="offset points",
                             ha="center", fontsize=8, color=MUTED)
         ax.set_xticks(np.arange(len(strategies)))
-        ax.set_xticklabels([LABELS.get(s, s).split(" (")[0] for s in strategies], rotation=30, ha="right")
+        names = [LABELS.get(s, s).split(" (")[0] for s in strategies]
+        if stacked:
+            ax.set_xticklabels([textwrap.fill(n.replace("_", " "), 16) for n in names], fontsize=8)
+        else:
+            ax.set_xticklabels(names, rotation=30, ha="right")
         ax.axhline(0, color=MUTED, lw=0.8)
         ax.set_title(label, loc="left")
         ax.grid(axis="x", visible=False)
         if col != "sharpe":
             ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
     if has_periods:
-        axes[0].legend(title="Solid = first period, faded = second", fontsize=8)
+        axes[0].legend(fontsize=8, loc="upper left")
     fig.suptitle(title, x=0.01, ha="left", fontweight="bold")
+    fig.tight_layout()
+    _save(fig, name)
+
+
+def sweep_bars(tables: dict[str, pd.DataFrame], metrics: list[tuple[str, str, str]], title: str, name: str,
+               highlight=None) -> None:
+    """Paper Figs. 8-10 style: one panel per metric, one bar group per parameter value (the
+    tables' index), one bar per period (the dict keys). `highlight` = the paper's setting."""
+    periods = list(tables)
+    values = tables[periods[0]].index
+    width = 0.8 / len(periods)
+    fig, axes = plt.subplots(1, len(metrics), figsize=(5.2 * len(metrics), 4))
+    for ax, (col, label, fmt) in zip(np.atleast_1d(axes), metrics):
+        for p_i, period in enumerate(periods):
+            x = np.arange(len(values)) + (p_i - (len(periods) - 1) / 2) * width
+            ys = tables[period][col].to_numpy(dtype=float)
+            bars = ax.bar(x, ys, width * 0.92, color=COLORS["final"], alpha=1.0 if p_i == 0 else 0.5, label=period)
+            for bar, v, value in zip(bars, ys, values):
+                if value == highlight:
+                    bar.set_edgecolor(TEXT)
+                    bar.set_linewidth(1.4)
+                ax.annotate(fmt.format(v), (bar.get_x() + bar.get_width() / 2, v), xytext=(0, 2 if v >= 0 else -10),
+                            textcoords="offset points", ha="center", fontsize=7, color=MUTED)
+        ax.set_xticks(np.arange(len(values)))
+        ax.set_xticklabels([f"{v:g}" if isinstance(v, (int, float)) else str(v) for v in values])
+        ax.axhline(0, color=MUTED, lw=0.8)
+        ax.set_title(label, loc="left")
+        ax.grid(axis="x", visible=False)
+        if "%" in fmt:
+            ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
+    np.atleast_1d(axes)[0].legend(fontsize=8)
+    fig.suptitle(title + ("" if highlight is None else "  (outlined: the paper's setting)"),
+                 x=0.01, ha="left", fontweight="bold")
     fig.tight_layout()
     _save(fig, name)
 

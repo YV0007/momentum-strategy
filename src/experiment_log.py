@@ -21,6 +21,8 @@ def log_run(config: StrategyConfig, period: str, start: str, end: str, metrics: 
     if params["intraday_sizing"] == "none":      # paper configs keep the same params text as earlier rows
         for key in ("intraday_sizing", "size_floor", "size_cap"):
             params.pop(key)
+    if params["lookback"] == 14:
+        params.pop("lookback")
     row = {"timestamp": datetime.now().isoformat(timespec="seconds"), "strategy": config.name,
            "period": period, "start": start, "end": end,
            "params": json.dumps(params, sort_keys=True), **metrics, "note": note}

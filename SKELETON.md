@@ -36,7 +36,7 @@ SPY_Momentum_str/
 │   │   ├── backtest.py          #     day loop, decision points, positions, AUM update
 │   │   ├── rules.py             #     entry/stop logic per stop type
 │   │   ├── sizing.py            #     1x vs volatility-target sizing; own versions' per-trade multiplier
-│   │   └── costs.py             #     commission + slippage per share
+│   │   └── costs.py             #     commission + slippage per share; tiered commission, I-Star impact
 │   ├── evaluation/              # P4
 │   │   ├── metrics.py           #     Sharpe, ann. return/vol, MDD, hit ratio, alpha/beta
 │   │   ├── baselines.py         #     buy & hold, open-to-close, random-entry placebo
@@ -45,10 +45,10 @@ SPY_Momentum_str/
 │   │   ├── diagnostics.py       # P5  regime, time-of-day, side, trade-sequence breakdowns
 │   │   ├── trade_features.py    # P6  market situation at each trade's entry (+ ML dataset later)
 │   │   ├── replication.py       #     our returns vs the paper's monthly table
+│   │   ├── paper_tables.py      # P8  paper Section 4 + FAQ analyses (patterns, weekday, legs, Table 4)
 │   │   ├── ablation.py          # P3  runs the ladder → results/train_ablation.md
 │   │   └── report.py            # P4  full evaluation of one period → tables, figures, report
 │   ├── strategies/
-│   │   ├── own.py               # P6  own-strategy logic (placeholder)
 │   │   └── ml_sizing.py         # P6  gradient-boosting rest-of-day volatility forecast (own_ml_vol)
 │   ├── experiment_log.py        # P0  appends each run's config + metrics to a log
 │   └── plots.py                 # P4–P8 equity, drawdown, metric bars, heatmaps
@@ -62,7 +62,7 @@ SPY_Momentum_str/
 │   ├── 05a_tune_ml_sizing.py    # P6  choose the ML settings on train (forecast accuracy only)
 │   ├── 05_own_strategy.py       # P6  own versions vs final: walk-forward blocks, years, cost stress
 │   ├── 06_run_test.py           # P7  test + post-publication evaluation, replication report
-│   └── 07_robustness.py         # P8
+│   └── 07_robustness.py         # P8  every paper variation and analysis, train + test
 │
 ├── tests/                       # run with `pytest`
 │   ├── conftest.py              #     synthetic market + real-data fixture
@@ -74,7 +74,8 @@ SPY_Momentum_str/
 │   ├── test_evaluation.py       #     metrics, Sharpe stats, placebo, CV folds
 │   ├── test_diagnostics.py      #     diagnostics reconcile with the backtest
 │   ├── test_trade_features.py   #     entry features have no look-ahead
-│   └── test_intraday_sizing.py  #     per-trade sizing, whole-share accounting, ML sees no test data
+│   ├── test_intraday_sizing.py  #     per-trade sizing, whole-share accounting, ML sees no test data
+│   └── test_paper_variants.py   #     tiered commission, I-Star impact, daily patterns
 │
 ├── notebooks/
 │   ├── 01_data_exploration.ipynb  # scratch work
@@ -89,6 +90,7 @@ SPY_Momentum_str/
     ├── data_quality.md          # P1
     ├── own_strategy_gex.md      # P6  record of the retired GEX attempt (code removed)
     ├── own_version_research.md  # P6  research log of the new own version (stages, findings)
+    ├── paper_coverage.md        # P8  every element of the paper: implemented where, result vs paper
     └── talking_points.md        # P9
 ```
 

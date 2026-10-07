@@ -1,0 +1,19 @@
+# Multi-asset test (Phase 9): the paper's strategy, unchanged, on 16 liquid ETFs. Chosen on
+# 2026-10-07 by rules fixed in advance: listed before 2016, no splits since 2016 (the pipeline uses
+# unadjusted prices), home market open during US hours, highly liquid.
+SPY: us_equity_index
+QQQ: us_equity_index
+IWM: us_equity_index
+DIA: us_equity_index
+XLE: us_equity_sector
+XLF: us_equity_sector
+XLK: us_equity_sector
+XLV: us_equity_sector
+XLU: us_equity_sector
+TLT: treasuries
+IEF: treasuries
+HYG: credit
+LQD: credit
+GLD: precious_metals
+SLV: precious_metals
+VNQ: real_estate

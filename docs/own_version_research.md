@@ -206,3 +206,116 @@ Frozen on 2026-10-05 with the git commit that adds this section: `config/strateg
 (own_turbulence, own_ml_vol), `config/ml_sizing.yaml`, `src/engine/sizing.py`,
 `src/strategies/ml_sizing.py`, `src/intraday.py`. Roles and test criteria as fixed in Stage 3.
 The next step is a single run of `scripts/06_run_test.py`.
+
+## Stage 5: test result (SECOND use of 2023 – Oct 2026) — 2026-10-05
+One run of `scripts/06_run_test.py` after the freeze commit (aa5acc2). Net of costs. Full tables:
+`results/own_vs_final_test.md`, `results/test_report.md`, `results/post_publication_report.md`.
+
+| Test 2023-01-03 – 2026-10-02 | Annual return | Volatility | Sharpe | Max drawdown | Sharpe gain vs final [95% CI] |
+|---|---|---|---|---|---|
+| final (paper, our implementation) | 16.3% | 14.4% | 1.12 | 18.8% | |
+| own_turbulence (rule, main) | 17.6% | 12.5% | 1.35 | 11.5% | +0.23 [−0.01, +0.44] |
+| own_ml_vol (ML, challenger) | 15.8% | 12.6% | 1.22 | 15.0% | +0.10 [−0.16, +0.32] |
+| SPY buy & hold | 22.1% | 14.9% | 1.42 | 18.8% | |
+
+| Post-publication 2024-05-10 – 2026-10-02 | Annual return | Volatility | Sharpe | Max drawdown | Sharpe gain vs final [95% CI] |
+|---|---|---|---|---|---|
+| final | 5.5% | 14.8% | 0.44 | 18.8% | |
+| own_turbulence | 6.3% | 12.0% | 0.57 | 11.6% | +0.14 [−0.26, +0.51] |
+| own_ml_vol | 4.8% | 12.2% | 0.44 | 15.0% | +0.00 [−0.39, +0.38] |
+
+### Verdicts, as fixed in Stage 3
+- **Rule (main): points the right way, not significant.** +0.23 Sharpe, interval [−0.01, +0.44],
+  just touching zero. Same size of gain as on train (+0.23 whole train, +0.28 blocks), with lower
+  volatility (14.4% → 12.5%) and a much smaller drawdown (18.8% → 11.5%) at a slightly higher return.
+- **ML (challenger): points the right way, not significant**, and worse than the rule:
+  −0.13 [−0.24, −0.02] vs own_turbulence. The rule stays the main version.
+- research.yaml criteria: Sharpe ≥ 0.5 met; placebo beaten (p = 0.006 rule, 0.009 ML); buy & hold
+  NOT beaten on Sharpe (1.35 vs 1.42), as for the paper's final (1.12). All three have beta ≈ 0
+  (−0.01 to −0.03) and alpha ≈ 16–17% a year, so they diversify a stock portfolio rather than replace it.
+
+### Reading
+- Most of the test gain comes from 2026 (+0.58 Sharpe, a partial year); 2023 +0.05, 2024 −0.04,
+  2025 +0.12. The sign was right in 3 of 4 years, but the gain is not spread evenly.
+- The ML forecast was better than the rule's implicit forecast on train (R² 0.54 vs 0.46) and still
+  traded worse on test. Better volatility forecasts did not translate into better sizing; the
+  simpler rule generalized better.
+- After publication the strategy remains weak (final 0.44); sizing reduces risk but does not
+  restore the faded edge.
+
+## Stage 6: VWAP-only stop — tried and retired, 2026-10-06
+Hypothesis: once an expansion starts it keeps going, so the band + VWAP stop exits too early.
+Tested by exiting only when a half-hour check finds the price on the wrong side of VWAP (paper FAQ
+Q22), for final, own_turbulence and own_ml_vol, everything else unchanged. Its script and report
+were removed; this note and its runs in `results/experiment_log.csv` (strategies `*_vwap_stop`,
+note "VWAP-only stop variant") are the record.
+
+| Sharpe: band + VWAP → VWAP only | Train blocks 2018–2022 | Whole train | Test (third look) |
+|---|---|---|---|
+| final | 1.69 → 1.78 (+0.09 [−0.21, +0.36]) | 1.07 → 1.13 | 1.12 → 1.03 |
+| own_turbulence | 1.97 → 2.02 (+0.05 [−0.31, +0.39]) | 1.30 → 1.34 | 1.35 → 1.31 |
+| own_ml_vol | 1.93 → 2.00 (+0.07 [−0.29, +0.40]) | — | 1.22 → 1.20 |
+
+Expansions do run further (trades held to the close 33% → 48%; about +7 bps a day on expansion
+days), but failed breakouts are held longer too (3–6 bps a day worse on the other ~59% of days).
+Return and volatility both rise; Sharpe does not change significantly. Not adopted.
+
+## Stage 7: options data and the release calendar as a day-level sizing signal — feasibility, 2026-10-06
+Hypothesis: the strategy profits when today's move beats what the noise bands expect (the
+"volatility surprise", |open-to-close| / band sigma at the close). Bands look back 14 days, options
+look forward, so options data and scheduled releases known at the open should predict the surprise,
+and sizing the day by that forecast should help. Train 2016–2022 only; walk-forward blocks 2018–2022.
+
+Data (free, in `data/raw/options/`, git-ignored): Cboe VIX9D and VIX3M (9:30 opens), VVIX and SKEW
+(previous close), SqueezeMetrics GEX (previous close, percentile of its trailing year), FOMC decision
+days (federalreserve.gov), payroll days (BLS scheduling rule; the BLS site blocks automated access).
+CPI days are missing: no free source reachable automatically.
+
+**Step 1, forecast: passed, modestly.** On their own, VIX / 14-day realized vol (rank correlation with
+the surprise +0.19, same sign 7/7 years), the overnight gap in vol units (+0.18, 7/7), GEX (−0.14,
+7/7), VIX9D / VIX (+0.13, 6/7) and VIX9D / 5-day realized vol (+0.11, 7/7) all predict it. FOMC days
+expand more often (54% vs 41%), payroll days too (52%). Out of sample: AUC for an expansion day 0.62
+with VIX / realized vol alone, 0.64 with all inputs (gradient boosting or ridge); R² of the surprise
+2.5% → 4–5%.
+
+**Step 2, sizing: failed.** Day multiplier 0.5–1.5x by the forecast's rank, on final and on
+own_turbulence, three forecast models: Sharpe change −0.02 to −0.22 in all 6 variants (ridge
+significantly negative), annual return up, volatility up more.
+
+**Why.** By fifths of the out-of-sample forecast, the expansion-day rate rises from 31% to 60% and the
+strategy's daily spread from 40 to 63 bps, but its mean per unit of risk stays flat (about 0.1). The
+forecast predicts the strategy's risk (rank correlation with its absolute daily result +0.20), not its
+return (+0.02). Predictable volatility (priced by options, scheduled events) comes without extra edge;
+the profitable expansions are the unexpected ones. FOMC days illustrate it: more expansion, but −1.0
+bps a day vs +2.4 on other days (whipsaw around 14:00).
+
+Not adopted as a return signal. Open idea, formed AFTER seeing these results: use the same inputs as a
+risk forecast (smaller size on predicted big-move days). It would need a fresh holdout (other ETFs or
+paper trading). Screen: 6 sizing variants + 1 diagnostic (scratch scripts, not in the repo).
+
+**Follow-up, same day: options inputs inside the own_ml_vol volatility model (size = 1 / forecast).**
+Forward selection from the frozen 4 features (same settings, same 0.25% tolerance) added FOMC-ahead
+(14:00 statement still to come; −9.1% forecast error) and VIX9D / VIX (−1.6%). Out-of-sample R² of
+rest-of-day volatility 0.543 → 0.594 (at 10:00: 0.482 → 0.551). Trading, walk-forward blocks
+2018–2022: Sharpe 1.93 → 1.93 (+0.00 [−0.04, +0.04]); the turbulence rule 1.97. A better volatility
+forecast did not change the result. Not adopted. 1 more variant (7 in this stage).
+
+## Stage 8: opportunity map — where is there still something to gain? (train only, 2026-10-06)
+Method: ceiling analysis (Sharpe at 1x if one decision were perfect) × predictability (out-of-sample
+IC / AUC of what follows each decision, from every input known at that moment; shallow GBT, 4
+walk-forward blocks), plus plain conditional means. The final strategy at 1x has Sharpe 0.81.
+
+| Lever | Ceiling (perfect) | Predictability found | Verdict |
+|---|---|---|---|
+| Direction at entry | 8.5 | breakout continuation: AUC 0.44–0.48, IC ≤ 0 | none |
+| Day sizing (good vs bad days) | 4.3 | expansion AUC 0.64, but return per unit risk flat (Stage 7) | only as volatility |
+| Exit: stop or hold | 3.8 | open trade, rest of day: IC 0.057 (3/4 blocks), AUC 0.54; trades already losing keep losing (t = −2.3, 5/7 years) | the one weak signal |
+| Re-entries | 2.5 | +1.0 to +1.5 bps vs +3.3 for first trades; negative in 4/7 years | weak |
+| New source: reversion inside the band | — | IC 0.01, AUC 0.51 | none |
+| New source: hold winners overnight | — | −0.8 bps, t = −0.2 | none |
+| Size of the next move (volatility) | — | IC 0.40, 4/4 blocks | already used |
+
+Reading: from price, volume, volatility and options state, the direction of SPY at every decision
+point is unpredictable; only the size of moves is. The edge is the payoff shape (small losses, large
+trend-day wins), not a forecast. With per-bet IC near zero, Grinold's fundamental law (IR ≈ IC × √breadth)
+points to breadth (more independent markets) and to new information not contained in price.

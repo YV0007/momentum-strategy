@@ -1,5 +1,4 @@
-"""The market situation at the moment each trade is entered. (Own-version research, Stage 1;
-later the dataset for an ML trade filter.)
+"""The market situation at the moment each trade is entered. (Own-version research, Stage 1)
 
 Every feature uses only information available at the decision time; the intraday ones come from
 src/intraday.py (see there for how "normal" is defined).

@@ -20,12 +20,15 @@ N_PLACEBO = 1000
 
 
 def trial_sharpes(period: str) -> list[float]:
-    """Daily Sharpe of every distinct configuration logged for this period (Deflated Sharpe)."""
+    """Daily Sharpe of every distinct strategy logged for this period (Deflated Sharpe). Counted
+    by name, not by parameter text: the config schema gained fields over time, so the same design
+    was logged with different parameter texts. Every new design gets a new name."""
     if not LOG_FILE.exists():
         return []
     log = pd.read_csv(LOG_FILE)
-    log = log[(log["period"] == period) & (log["note"].fillna("") != "ablation")]
-    log = log.drop_duplicates("params", keep="last")
+    # ablation and robustness runs decompose or stress fixed designs; they are not candidates
+    log = log[(log["period"] == period) & ~log["note"].fillna("").str.startswith(("ablation", "robustness"))]
+    log = log.drop_duplicates("strategy", keep="last")
     return list(log["sharpe"] / np.sqrt(252))
 
 

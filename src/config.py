@@ -18,11 +18,6 @@ SYMBOL = "SPY"
 START_DATE = "2016-01-01"  # first full year of Alpaca SIP history
 NY_TZ = "America/New_York"
 
-# Processed outputs
-MINUTE_FILE = PROCESSED_DIR / "spy_minute.parquet"
-DAILY_FILE = PROCESSED_DIR / "spy_daily.parquet"
-FEATURES_MINUTE_FILE = PROCESSED_DIR / "features_minute.parquet"
-FEATURES_DAILY_FILE = PROCESSED_DIR / "features_daily.parquet"
 CONFIG_DIR = ROOT / "config"
 BACKTEST_DIR = RESULTS_DIR / "backtests"
 FIGURES_DIR = RESULTS_DIR / "figures"
@@ -37,6 +32,7 @@ class StrategyConfig:
     leverage: float = 1.0             # leverage for fixed sizing
     gap_adjust: bool = True           # band around max/min(open, previous close), not just the open
     vm: float = 1.0                   # volatility multiplier on the noise area
+    lookback: int = 14                # days in the noise-area average move (paper: 14; FAQ Q6 varies it)
     target_vol: float = 0.02          # daily vol target for vol_target sizing
     max_leverage: float = 4.0
     first_decision: str = "10:00"
@@ -64,10 +60,26 @@ class ResearchConfig:
     slippage: float
     trading_days: int
     risk_free_rate: float
+    commission_tiered: bool = False   # paper 4.6: lower IB rate once the trailing month exceeds 300k shares
+    slippage_model: str = "fixed"     # "fixed" ($/share) | "istar" (Kissell I-Star market impact, paper FAQ Q15)
+
+    def __post_init__(self):
+        assert self.slippage_model in ("fixed", "istar"), self.slippage_model
 
     @property
     def cost_per_share(self) -> float:
         return self.commission + self.slippage
+
+
+def processed_files(symbol: str = SYMBOL) -> dict[str, Path]:
+    """Processed tables of one symbol: minute bars, daily table, minute and daily features."""
+    folder = PROCESSED_DIR / symbol
+    return {name: folder / f"{name}.parquet" for name in ("minute", "daily", "features_minute", "features_daily")}
+
+
+def load_universe() -> dict[str, str]:
+    """Symbols of the multi-asset test and their asset class (config/universe.yaml)."""
+    return yaml.safe_load((CONFIG_DIR / "universe.yaml").read_text())
 
 
 def load_research() -> ResearchConfig:
