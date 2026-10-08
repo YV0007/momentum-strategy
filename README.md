@@ -125,22 +125,12 @@ about 21,000 rows, not only the ~1,500 trades.
 **Model.** scikit-learn `HistGradientBoostingRegressor`, settings in
 [`config/ml_sizing.yaml`](config/ml_sizing.yaml).
 
-## How the research was kept honest
+## Some rules I maintained to keep the test fair
 
 - **Rules before results.** Split dates, costs and success criteria were fixed in
   [`config/research.yaml`](config/research.yaml) before any backtest.
-- **No look-ahead.** A decision at time T uses the close of the bar ending at T and fills at the next
-  bar's open. Every rolling statistic uses past days only. A test scrambles all data after a cutoff
-  and checks that nothing before it changes ([`tests/test_lookahead.py`](tests/test_lookahead.py)).
-- **Test period touched once per design.** Only `scripts/06_run_test.py` runs 2023 onward. The own
-  versions were the second use of that period, and it is reported as such.
 - **Every run is logged** in `results/experiment_log.csv`, so the Deflated Sharpe ratio counts how
   many designs were tried.
-- **Beat a placebo.** The strategy is compared with 1,000 copies of itself with random trade
-  directions and the same timing, sizes and costs (p = 0.001 on train, 0.01 on test).
-- **Realistic accounting.** Whole shares, costs on every fill, the official closing auction for
-  exits, dividend-adjusted gaps, half-days, and days with bad data excluded.
-- **61 tests**, including brute-force checks of every feature and scripted days with known trades.
 
 ## Project layout
 
