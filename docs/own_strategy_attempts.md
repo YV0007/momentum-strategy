@@ -5,17 +5,23 @@ Baseline: the paper's final strategy, our replication. Sharpe 1.69 in the train 
 All design work on train; Sharpe gains are paired block bootstrap differences with a 95% interval.
 Every run is logged in `results/experiment_log.csv`.
 
-| # | Attempt | Best on train | Test | End |
-|:-:|:--|:--|:--|:--|
-| 1 | GEX sizing | +0.13 [−0.01, +0.28] | −0.09 [−0.34, +0.19] | Retired |
-| 2 | ML entry filters | +0.03 at best | not run | Retired |
-| 3 | ML sizing by trade outcome | +0.12 at best | not run | Retired |
-| 4 | **Own A: turbulence sizing** | **+0.28 [+0.06, +0.49]** | **+0.23 [−0.01, +0.44]** | **Kept, main version** |
-| 5 | Own B: ML volatility sizing | +0.24 [+0.04, +0.44] | +0.10 [−0.16, +0.32] | Challenger, lost to Own A |
-| 6 | VWAP-only stop | +0.09 [−0.21, +0.36] | 1.12 → 1.03 | Retired |
-| 7 | Day sizing by options data and release calendar | −0.02 to −0.22 | not run | Retired |
-| 8 | Options inputs in the ML model | +0.00 [−0.04, +0.04] | not run | Retired |
-| 9 | Multi-asset, 12 ETFs | portfolio Sharpe 0.56 vs 1.69 for SPY alone | not run | Stopped after train |
+Sharpe ratio of the best version from each attempt, net of costs. — = not run or not recorded.
+
+| # | Attempt | Train blocks 2018–22 | Whole train 2016–22 | Test 2023–26 | End |
+|:-:|:--|:-:|:-:|:-:|:--|
+| | Paper's final strategy (baseline) | 1.69 | 1.07 | 1.12 | |
+| 1 | GEX sizing | — | 1.20 | 1.03 | Retired |
+| 2 | ML entry filters | 1.72 | — | — | Retired |
+| 3 | ML sizing by trade outcome | 1.81 | — | — | Retired |
+| 4 | **Own A: turbulence sizing** | **1.97** | **1.30** | **1.35** | **Kept, main version** |
+| 5 | Own B: ML volatility sizing | 1.93 | — | 1.22 | Challenger, lost to Own A |
+| 6 | VWAP-only stop (on Own A) | 2.02 | 1.34 | 1.31 | Retired |
+| 7 | Day sizing by options data and release calendar | −0.02 to −0.22 ¹ | — | — | Retired |
+| 8 | Options inputs in the ML model | 1.93 | — | — | Retired |
+| 9 | Multi-asset, 12 ETFs (Own A portfolio) | 0.66 | 0.27 | — | Stopped after train |
+
+¹ Only the change against its base (final or Own A) was recorded for these 6 variants, not the
+Sharpe itself; every variant lowered it.
 
 ## 1. GEX sizing (`own_gex`), first own attempt
 - **Idea:** halve leverage on days after high dealer gamma (SqueezeMetrics GEX in the top 20% of its
