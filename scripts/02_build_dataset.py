@@ -4,8 +4,7 @@ features for each symbol. (Phases 1-2; multi-asset universe Phase 9)
     python -m scripts.02_build_dataset                    # every symbol in config/universe.yaml
     python -m scripts.02_build_dataset --symbols SPY
 
-Writes data/processed/<SYMBOL>/. The data-quality report goes to docs/data_quality.md for SPY and
-to results/data_quality/<SYMBOL>.md for the other symbols.
+Writes data/processed/<SYMBOL>/ and the data-quality report results/data_quality/<SYMBOL>.md.
 """
 
 import argparse
@@ -13,7 +12,7 @@ import argparse
 import pandas as pd
 
 from src import features
-from src.config import DOCS_DIR, RAW_DIR, RESULTS_DIR, SYMBOL, load_universe, processed_files
+from src.config import RAW_DIR, RESULTS_DIR, load_universe, processed_files
 from src.data import clean, quality
 
 
@@ -39,7 +38,7 @@ def build(symbol: str) -> None:
         table.to_parquet(files[name])
 
     results = quality.check(minute, daily)
-    report = DOCS_DIR / "data_quality.md" if symbol == SYMBOL else RESULTS_DIR / "data_quality" / f"{symbol}.md"
+    report = RESULTS_DIR / "data_quality" / f"{symbol}.md"
     quality.write_report(results, report)
     print(f"{symbol}: {results['n_days']:,} days, {results['n_invalid']} invalid -> {files['minute'].parent}", flush=True)
 

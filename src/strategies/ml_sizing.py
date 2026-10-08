@@ -3,7 +3,7 @@ volatile the rest of the day will be, relative to normal. (Phase 6)
 
 The model predicts `target` of src/intraday.decision_panel: log(realized vol from the fill bar to
 the close / its 14-day normal at the same time). It never sees trade direction or P&L: volatility
-is forecastable, trade outcomes are not (docs/own_version_research.md, Stage 2). It trains on
+is forecastable, trade outcomes are not (docs/own_strategy_attempts.md). It trains on
 every (day, decision time) of the training days, not just the ~1,500 trades.
 
 Settings (features, hyper-parameters) live in config/ml_sizing.yaml, chosen on the train period

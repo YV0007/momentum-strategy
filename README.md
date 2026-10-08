@@ -95,8 +95,8 @@ once on the test period, judged by a paired block bootstrap with the reading fix
 **Result.** Own A: +0.23 Sharpe [−0.01, +0.44], "points the right way, not significant". Volatility
 fell from 14.4% to 12.5% and the max drawdown from 18.8% to 11.5% at a slightly higher return. Most
 of the gain came in 2026, a partial year. Own B: +0.10, and significantly worse than the simple rule
-(−0.13 [−0.24, −0.02]). The full research log is in
-[`docs/own_version_research.md`](docs/own_version_research.md).
+(−0.13 [−0.24, −0.02]). Every version tried, with its numbers and why it was kept or retired, is in
+[`docs/own_strategy_attempts.md`](docs/own_strategy_attempts.md).
 
 ### The gradient-boosting model behind Own B
 
@@ -168,7 +168,7 @@ config/      research rules, strategy settings, ML settings (YAML)
 src/         all logic: data, features, engine (backtest, rules, sizing, costs), ML, evaluation, plots
 scripts/     one command per step, run in order 01 → 07
 tests/       pytest: features, look-ahead, scripted days, accounting, paper days
-docs/        research log, paper coverage, data quality, results snapshot
+docs/        every own-strategy attempt, paper coverage, results snapshot
 ```
 
 Every strategy is the same engine with different settings in

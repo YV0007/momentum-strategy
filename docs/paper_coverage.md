@@ -50,7 +50,7 @@ paper's 2007–2015 years (incl. 2008) cannot be reproduced with this data.
 | 8 daily patterns (NR4, NR7, ID, OD, Triangle, Trend, Big tail, Strong/weak closure) | §4.2, Table 5 | ✅ | `robustness_report.md` §7 |
 | Day of the week | §4.3, Table 6 | ✅ | `robustness_report.md` §8 |
 | VM sweep | §4.4, Fig. 9 | ✅ | `robustness_report.md` §2, `figures/robustness_vm.png` |
-| RSI(5) regression (gamma-imbalance proxy) | §4.5 | ✅ | `checkpoint_report.md` 1.2, 1.7; real GEX data: `docs/own_strategy_gex.md` |
+| RSI(5) regression (gamma-imbalance proxy) | §4.5 | ✅ | `checkpoint_report.md` 1.2, 1.7; real GEX data: `docs/own_strategy_attempts.md` (attempt 1) |
 | Commission sensitivity | §4.6, Fig. 10 | ✅ | `robustness_report.md` §4, `figures/robustness_commission.png` |
 | Long and short legs | FAQ Q5 | ✅ | `robustness_report.md` §11, `figures/robustness_legs.png` |
 | Lookback sweep | FAQ Q6 | ✅ | `robustness_report.md` §3, `figures/robustness_lookback.png` |

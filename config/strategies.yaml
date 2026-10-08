@@ -19,7 +19,7 @@ final:                      # paper Table 3, the headline strategy
   target_vol: 0.02
   max_leverage: 4
 
-# ---- own versions (Phase 6, docs/own_version_research.md). Same entries, stops and daily
+# ---- own versions (Phase 6, docs/own_strategy_attempts.md). Same entries, stops and daily
 # volatility target as `final`; each trade is additionally scaled at entry by an intraday
 # multiplier in [size_floor, size_cap], held to its exit, total leverage still <= max_leverage.
 
