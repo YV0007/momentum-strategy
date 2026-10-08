@@ -73,7 +73,7 @@ Our backtest of the final strategy against the paper's published monthly returns
 
 ## Own extension: sizing by intraday turbulence
 
-**Finding (train only).** Whether a trade wins cannot be predicted at entry: no feature reached an
+**Finding.** Whether a trade wins cannot be predicted at entry: no feature reached an
 AUC outside 0.47–0.53. How volatile the rest of the day will be can be predicted: volatility so far
 today has a rank correlation of 0.71 with rest-of-day volatility. Because leverage is set at the
 open, the final strategy takes its largest risks on the most turbulent days: the most turbulent
