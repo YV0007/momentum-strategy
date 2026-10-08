@@ -4,16 +4,15 @@ A replication of Zarattini, Aziz & Barbon, *Beat the Market: An Effective Intrad
 for S&P500 ETF (SPY)*, built from raw SPY 1-minute bars (January 2016 – October 2026), plus an own
 extension that sizes each trade by how turbulent the day has been so far.
 
-The project asks three questions:
+The project does three things:
 
-1. **Can the paper's results be reproduced?** Yes: our monthly returns track the paper's published
+1. **Replicates the papers start** Sucssefuel accomplsihed our monthly returns track the paper's published
    ones with a correlation of 0.988.
-2. **Does the strategy still work out of sample?** On 2023 – Oct 2026 it earns a Sharpe ratio of
+2. **Tests wether the strategy still work out of sample?** On 2023 – Oct 2026 it earns a Sharpe ratio of
    1.12 with a beta near zero, but SPY buy & hold did better (1.42), and since the paper's
    publication (May 2024) the Sharpe is 0.44.
-3. **Can it be improved?** Sizing each trade by intraday turbulence raised the Sharpe from 1.12 to
-   1.35 on the test period and cut the max drawdown from 18.8% to 11.5%. The gain points the right
-   way but is not statistically significant (95% interval −0.01 to +0.44).
+3. ** Pruposition of my own version of th strat?** The idea lies on the advancesd sizing each trade by intraday turbulence which allowed to raised the Sharpe from 1.12 to
+   1.35 on the test period and cut the max drawdown from 18.8% to 11.5%.
 
 ## Results at a glance
 
