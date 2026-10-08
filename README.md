@@ -106,9 +106,7 @@ the same idea as the noise area. The trade's size is 1 / the forecast, clipped t
 never sees trade direction or profit. It trains on every decision time of every train day,
 about 21,000 rows, not only the ~1,500 trades.
 
-**Features.** All are known at the decision time and scale-free (relative to the day's own normal),
-built in [`src/intraday.py`](src/intraday.py). Backward elimination kept a feature only if removing
-it raised the cross-validated error by at least 0.25%:
+**Features.**
 
 | Feature | Meaning | Used |
 |:--|:--|:--:|
