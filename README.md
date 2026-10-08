@@ -103,7 +103,7 @@ of the gain came in 2026, a partial year. Own B: +0.10, and significantly worse 
 the day relative to normal: `log(realized volatility from the fill to the close ÷ its 14-day normal
 at the same time of day)`. "Normal" is the average over the previous 14 valid days at that time,
 the same idea as the noise area. The trade's size is 1 / the forecast, clipped to 0.5–1.5. The model
-never sees trade direction or profit. It trains on every (day, decision time) of the train period,
+never sees trade direction or profit. It trains on every decision time of every train day,
 about 21,000 rows, not only the ~1,500 trades.
 
 **Features.** All are known at the decision time and scale-free (relative to the day's own normal),
