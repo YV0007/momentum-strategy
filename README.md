@@ -123,15 +123,7 @@ about 21,000 rows, not only the ~1,500 trades.
 | `decision_minute` | minutes after the open | dropped |
 
 **Model.** scikit-learn `HistGradientBoostingRegressor`, settings in
-[`config/ml_sizing.yaml`](config/ml_sizing.yaml): trees of depth 1 (an additive model with no
-interactions), 250 iterations, learning rate 0.05, at least 200 rows per leaf, L2 penalty 10. All
-four features have monotone constraints set from economics, not fitted: more volatility, volume or
-implied volatility so far can only mean more volatility later. Settings were chosen by walk-forward
-forecast error with the one-standard-error rule (the simplest setting within one standard error of
-the best), from grids of 72 and then 288 settings
-([`scripts/05a_tune_ml_sizing.py`](scripts/05a_tune_ml_sizing.py)). Out-of-sample R² of the forecast:
-0.54, against 0.46 for the rule's implicit forecast (volatility so far) and 0.54 for a linear
-HAR-style model.
+[`config/ml_sizing.yaml`](config/ml_sizing.yaml).
 
 ## How the research was kept honest
 
