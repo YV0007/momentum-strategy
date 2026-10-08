@@ -71,9 +71,6 @@ Our backtest of the final strategy against the paper's published monthly returns
 
 ![Our backtest vs the paper](docs/results/figures/replication.png)
 
-The ablation ladder ([`docs/results/train_ablation.md`](docs/results/train_ablation.md)) adds one
-decision at a time: gap adjustment, band stop, VWAP stop, volatility sizing.
-
 ## Own extension: sizing by intraday turbulence
 
 **Finding (train only).** Whether a trade wins cannot be predicted at entry: no feature reached an
