@@ -16,9 +16,7 @@ The project does three things:
    correlation of 0.71. So each trade is sized at entry by today's realized volatility relative to
    its 14-day normal at the same time of day, a rule with no fitted parameters, frozen before the
    test. On the test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from
-   18.8% to 11.5%. A gradient-boosting challenger with monotone constraints forecast volatility more
-   accurately (R² 0.54 vs 0.46) but traded worse, so the simple rule stayed. The gain matches the
-   one on the train period.
+   18.8% to 11.5%.
 
 ## Results at a glance
 
