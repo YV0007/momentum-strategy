@@ -14,11 +14,9 @@ The project does three things:
 3. **Proposes my own version.** Training an ML model to predict whether a breakout will play out did
    not work: its AUC of 0.46–0.54 is no better than a coin flip. Predicting volatility, in contrast,
    turned out to be highly useful: volatility so far today predicts the rest of the day's volatility
-   with a rank correlation of 0.71, and a gradient-boosting model forecasts it with an out-of-sample
-   R² of 0.54. So each trade is sized at entry by today's realized volatility relative to its 14-day
-   normal at the same time of day. On the
-   test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from 18.8% to
-   11.5%. Sizing by the gradient-boosting forecast instead reached 1.22, so the simpler rule stayed.
+   with a rank correlation of 0.71. So each trade is sized at entry by today's realized volatility
+   relative to its 14-day normal at the same time of day. On the test period it raised the Sharpe
+   from 1.12 to 1.35 and cut the maximum drawdown from 18.8% to 11.5%.
 
 ## Results at a glance
 
