@@ -16,7 +16,7 @@ The project does three things:
    turned out to be highly useful: volatility so far today predicts the rest of the day's volatility
    with a rank correlation of 0.71, and a gradient-boosting model forecasts it with an out-of-sample
    R² of 0.54. So each trade is sized at entry by today's realized volatility relative to its 14-day
-   normal at the same time of day, a rule with no fitted parameters, frozen before the test. On the
+   normal at the same time of day. On the
    test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from 18.8% to
    11.5%. Sizing by the gradient-boosting forecast instead reached 1.22, so the simpler rule stayed.
 
