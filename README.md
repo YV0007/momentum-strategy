@@ -91,7 +91,7 @@ at entry and held to exit, between 0.5× and 1.5×, total leverage ≤ 4×:
 Own A +0.28 Sharpe [+0.06, +0.49], Own B +0.24 [+0.04, +0.44]. Both were then frozen in git and run
 once on the test period, judged by a paired block bootstrap with the reading fixed in advance.
 
-**Result.** Own A: +0.23 Sharpe [−0.01, +0.44], "points the right way, not significant". Volatility
+**Result.** Own A: +0.23 Sharpe [−0.01, +0.44]. Volatility
 fell from 14.4% to 12.5% and the max drawdown from 18.8% to 11.5% at a slightly higher return. Most
 of the gain came in 2026, a partial year. Own B: +0.10, and significantly worse than the simple rule
 (−0.13 [−0.24, −0.02]). Every version tried, with its numbers and why it was kept or retired, is in
