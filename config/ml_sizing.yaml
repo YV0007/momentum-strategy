@@ -1,6 +1,4 @@
-# ML volatility forecast settings (own_ml_vol). Chosen on the TRAIN period only by
-# scripts/05a_tune_ml_sizing.py on 2026-10-05; see results/ml_sizing_tuning.md.
-# Frozen with the own versions: do not edit after the test run.
+# ML volatility forecast settings, chosen on the train period and frozen.
 features:
 - log_rel_vol_so_far
 - log_rel_vol_last30

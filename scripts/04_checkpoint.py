@@ -1,11 +1,4 @@
-"""Checkpoint diagnostics on the TRAIN period only. (Phase 5)
-
-    python -m scripts.04_checkpoint        (run 03_run_backtests first)
-
-Explains where the final strategy's edge comes from and where it fails, to decide what the
-own strategy should target. Writes results/checkpoint_report.md and
-results/figures/checkpoint_*.png. Nothing here touches the test period.
-"""
+"""Diagnostics of the final strategy on the train period."""
 
 import numpy as np
 import pandas as pd
@@ -23,7 +16,6 @@ PCT = {"traded_share", "hit_ratio", "share_of_pnl", "total_contribution", "retur
 
 
 def fmt(df: pd.DataFrame) -> str:
-    """Markdown table with number formats chosen by column name."""
     out = df.copy().astype(object)
     if isinstance(df.index, pd.DatetimeIndex):
         out.index = df.index.strftime("%Y-%m-%d")
@@ -66,7 +58,6 @@ def main() -> None:
     market = baselines.buy_and_hold(daily)["ret"]
     trades = dg.with_contribution(final)
 
-    # ---- 1. market regimes (all known at the open)
     vix_q = dg.quantile_buckets(feats["vix_open"], 5, "{:.1f}")
     regimes = {
         "VIX at open": dg.bucket_stats(ret, vix_q, traded, n),
@@ -85,7 +76,6 @@ def main() -> None:
         "NR4 yesterday (yes vs no)": dg.regression(ret, feats["nr4_prev"]),
     }).T
 
-    # ---- 2. inside the day
     tod = dg.time_of_day(prep, final, research.cost_per_share)
     assert np.isclose((tod["gross_bps"] - tod["cost_bps"]).sum(), ret.mean() * dg.BPS)
     by_entry = dg.trade_breakdown(trades, "entry_time", n)
@@ -97,7 +87,6 @@ def main() -> None:
     per_day = dg.bucket_stats(ret, final.daily["trades"].clip(upper=3).map({0: "0", 1: "1", 2: "2", 3: "3+"}),
                               traded, n)
 
-    # ---- 3. sides, years, extremes
     sides = dg.side_contributions(final)
     side_table = dg.trade_breakdown(trades, "side_name", n)
     side_table["sharpe_of_daily_contribution"] = sides.mean() / sides.std() * np.sqrt(n)
@@ -108,14 +97,12 @@ def main() -> None:
     payoff = dg.bucket_stats(ret, dg.quantile_buckets(daily["ret_oc"] * 100, 5, "{:.2f}"), traded, n)
     payoff.index = [f"{i} %" for i in payoff.index]
 
-    # ---- 4. how past volatility enters the strategy
     expansion = dg.expansion_ratio(daily, data.minute_feats)
     vol_level = dg.bucket_stats(ret, dg.quantile_buckets(feats["vol_daily"] * 100, 5, "{:.2f}"), traded, n)
     vol_level.index = [f"{i} %" for i in vol_level.index]
     vol_expansion = dg.bucket_stats(ret, dg.quantile_buckets(expansion, 5, "{:.2f}"), traded, n)
     vol_expansion.index = [f"{i}x" for i in vol_expansion.index]
 
-    # ---- figures
     label = "final strategy, train 2016–2022"
     plots.bucket_panels(regimes, f"Mean daily return by market regime ({label})", "checkpoint_regimes")
     plots.time_of_day_bars(tod, f"P&L by half-hour holding leg ({label})", "checkpoint_time_of_day")
@@ -134,8 +121,7 @@ def main() -> None:
     plots.day_panels(data.minute, data.minute_feats, final.trades, ret[best.index[:4]],
                      "The four best days (train)", "checkpoint_best_days")
 
-    # ---- report
-    sections = [  # (heading level, title, note, table)
+    sections = [
         (2, "Decision gate", decision_gate(), None),
         (2, "1. Market regimes, known at the open",
          "Mean daily return per bucket (bps of AUM) with 95% interval. Figure: checkpoint_regimes.png.", None),

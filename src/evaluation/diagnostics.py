@@ -1,11 +1,4 @@
-"""Checkpoint diagnostics: where does the edge come from, and where does it fail? (Phase 5)
-
-Run on the TRAIN period only. Bucket tables report the mean daily return with a 95% interval
-and t-stat: with a few hundred days per bucket, one bucket's Sharpe has a standard error near
-1, so only large, consistent patterns are worth acting on.
-
-All returns are daily strategy returns on start-of-day AUM; days without a trade count as 0.
-"""
+"""Breakdowns of where the strategy makes and loses money."""
 
 import numpy as np
 import pandas as pd
@@ -16,18 +9,13 @@ from src.engine.backtest import BacktestResult, Prepared, clock
 BPS = 1e4
 
 
-# ---------------------------------------------------------------- conditional returns
-
 def quantile_buckets(x: pd.Series, q: int = 5, fmt: str = "{:.0f}") -> pd.Series:
-    """Equal-sized buckets with readable range labels, e.g. '12.1-15.3'."""
     edges = pd.qcut(x, q, retbins=True, duplicates="drop")[1]
     labels = [f"{fmt.format(a)}–{fmt.format(b)}" for a, b in zip(edges[:-1], edges[1:])]
     return pd.qcut(x, q, labels=labels, duplicates="drop")
 
 
 def bucket_stats(ret: pd.Series, groups: pd.Series, traded: pd.Series, n: int = 252) -> pd.DataFrame:
-    """Per group: days, share of days traded, mean daily return (bps) with 95% half-width and
-    t-stat, hit ratio on traded days, annualized Sharpe, and share of total P&L."""
     df = pd.DataFrame({"ret": ret, "group": groups, "traded": traded}).dropna(subset=["group"])
     g = df.groupby("group", observed=True)["ret"]
     se = g.std() / np.sqrt(g.size())
@@ -45,7 +33,6 @@ def bucket_stats(ret: pd.Series, groups: pd.Series, traded: pd.Series, n: int = 
 
 
 def above_thresholds(ret: pd.Series, x: pd.Series, thresholds: list[float], n: int = 252) -> pd.DataFrame:
-    """Paper Fig. 8 style: performance on the days where x >= threshold."""
     rows = {}
     for t in thresholds:
         r = ret[x >= t]
@@ -55,19 +42,13 @@ def above_thresholds(ret: pd.Series, x: pd.Series, thresholds: list[float], n: i
 
 
 def regression(ret: pd.Series, x: pd.Series, per: float = 1.0) -> dict:
-    """ret (bps) = a + b * x with autocorrelation-robust t-stats; slope reported per `per` units."""
     df = pd.concat([ret * BPS, x.astype(float)], axis=1, keys=["y", "x"]).dropna()
     fit = sm.OLS(df["y"], sm.add_constant(df["x"])).fit(cov_type="HAC", cov_kwds={"maxlags": 5})
     return {"slope_bps": fit.params["x"] * per, "t_stat": fit.tvalues["x"],
             "p_value": fit.pvalues["x"], "days": len(df)}
 
 
-# ---------------------------------------------------------------- inside the day
-
 def time_of_day(prep: Prepared, result: BacktestResult, cost_per_share: float) -> pd.DataFrame:
-    """Average P&L of each half-hour holding leg (10:00-10:30, ..., 15:30-close), in bps of AUM.
-    Trading costs are booked on the leg where the trade happens (closing costs on the last leg).
-    Summed over legs, gross minus costs equals the average daily return."""
     position = prep.rule_positions()
     shares = result.daily["shares"].to_numpy()[:, None]
     aum = result.daily["aum_start"].to_numpy()[:, None]
@@ -91,10 +72,7 @@ def time_of_day(prep: Prepared, result: BacktestResult, cost_per_share: float) -
     }, index=pd.Index(labels, name="leg"))
 
 
-# ---------------------------------------------------------------- trades and sides
-
 def with_contribution(result: BacktestResult) -> pd.DataFrame:
-    """Trade log plus each trade's net P&L as a return on that day's starting AUM."""
     t = result.trades.copy()
     t["contribution"] = t["pnl"] / t["date"].map(result.daily["aum_start"])
     t["exit_type"] = np.where(t["exit_time"] == "close", "held to close", "stopped out")
@@ -103,20 +81,16 @@ def with_contribution(result: BacktestResult) -> pd.DataFrame:
 
 
 def side_contributions(result: BacktestResult) -> pd.DataFrame:
-    """Daily return split into the part earned by long trades and by short trades."""
     t = with_contribution(result)
     daily = t.pivot_table(index="date", columns="side_name", values="contribution", aggfunc="sum")
     return daily.reindex(result.daily.index).fillna(0.0)[["long", "short"]]
 
 
 def trade_breakdown(trades: pd.DataFrame, by: str, n: int = 252) -> pd.DataFrame:
-    """Per group of trades: count, hit ratio, average and total contribution."""
     g = trades.groupby(by)["contribution"]
     return pd.DataFrame({"trades": g.size(), "hit_ratio": g.apply(lambda c: (c > 0).mean()),
                          "avg_bps": g.mean() * BPS, "total_contribution": g.sum()})
 
-
-# ---------------------------------------------------------------- over time and extremes
 
 def yearly(result: BacktestResult, market_ret: pd.Series, vix: pd.Series, max_leverage: float,
            n: int = 252) -> pd.DataFrame:
@@ -140,7 +114,6 @@ def yearly(result: BacktestResult, market_ret: pd.Series, vix: pd.Series, max_le
 
 def extreme_days(result: BacktestResult, daily: pd.DataFrame, daily_feats: pd.DataFrame,
                  k: int = 10, worst: bool = True) -> pd.DataFrame:
-    """The k worst (or best) days with market context and what the strategy did."""
     ret = result.daily["ret"]
     days = ret.nsmallest(k).index if worst else ret.nlargest(k).index
     paths = (result.trades.assign(leg=lambda t: t["side"].map({1: "L", -1: "S"}) + " "
@@ -157,7 +130,6 @@ def extreme_days(result: BacktestResult, daily: pd.DataFrame, daily_feats: pd.Da
 
 
 def concentration(ret: pd.Series) -> dict:
-    """How much of the total P&L comes from a few days (typical of trend following)."""
     total = ret.sum()
     ordered = ret.sort_values(ascending=False)
     n = len(ret)
@@ -168,8 +140,6 @@ def concentration(ret: pd.Series) -> dict:
 
 
 def trade_sequence(trades: pd.DataFrame) -> pd.DataFrame:
-    """Trades labeled by their order within the day and how they relate to the previous trade:
-    the marginal value of re-entering after a stop-out."""
     t = trades.sort_values(["date", "entry_time"]).copy()
     number = t.groupby("date").cumcount() + 1
     t["sequence"] = number.clip(upper=3).map({1: "1st trade", 2: "2nd trade", 3: "3rd+ trade"})
@@ -181,8 +151,6 @@ def trade_sequence(trades: pd.DataFrame) -> pd.DataFrame:
 
 def stop_counterfactual(trades: pd.DataFrame, result: BacktestResult, close: pd.Series,
                         cost_per_share: float) -> pd.DataFrame:
-    """Stopped-out trades vs the same trades held to the close (explanatory: uses the close).
-    Many stopped trades that would have won at the close = stops too tight."""
     s = trades[trades["exit_type"] == "stopped out"].copy()
     aum = s["date"].map(result.daily["aum_start"])
     held = s["shares"] * s["side"] * (s["date"].map(close) - s["entry_price"]) - 2 * s["shares"] * cost_per_share
@@ -198,26 +166,12 @@ def stop_counterfactual(trades: pd.DataFrame, result: BacktestResult, close: pd.
 
 
 def expansion_ratio(daily: pd.DataFrame, minute_feats: pd.DataFrame) -> pd.Series:
-    """Today's open-to-close move in units of the recent normal move: |close / open - 1| divided
-    by the noise-area sigma at the last minute (the 14-day average move from the open at the
-    close). Above 1 = the day closed outside the noise area. Explanatory only: known at the close."""
     sigma_at_close = minute_feats.groupby("date")["sigma"].last().reindex(daily.index)
     return ((daily["close"] / daily["open"] - 1).abs() / sigma_at_close).rename("expansion")
 
 
-
-# ---------------------------------------------------------------- own-version research (Stage 1)
-
 def pnl_split(ret: pd.Series, expansion: pd.Series, leverage: pd.Series, spy_open_to_close: pd.Series,
               n: int = 252) -> pd.DataFrame:
-    """Each year's result as opportunity x capture + cost.
-
-    opportunity  share of days that close outside the noise area (expansion > 1)
-    capture      mean return on those days; capture_ratio compares it with a perfect-hindsight
-                 trade at the same leverage from open to close in the right direction
-    cost         mean return on the other days (failed breakouts)
-    The three *_effect columns split each year's deviation from the whole-period mean daily
-    return exactly: (p - p0)(cE0 - cN0) + p(cE - cE0) + (1 - p)(cN - cN0)."""
     exp = expansion > 1
     p0, ce0, cn0 = exp.mean(), ret[exp].mean(), ret[~exp].mean()
     rows = {}
@@ -242,22 +196,12 @@ def pnl_split(ret: pd.Series, expansion: pd.Series, leverage: pd.Series, spy_ope
 
 
 def _benjamini_hochberg(p_values: pd.Series) -> pd.Series:
-    """False-discovery-rate adjusted p-values (q-values) for testing many features at once."""
     order = p_values.sort_values()
     ranked = order * len(order) / np.arange(1, len(order) + 1)
     return ranked[::-1].cummin()[::-1].clip(upper=1).reindex(p_values.index)
 
 
 def feature_screen(trades: pd.DataFrame, features: list[str]) -> pd.DataFrame:
-    """How well each entry feature separates good trades from bad ones, on two questions:
-
-    hit rate  auc = chance that a random winning trade has a higher value than a random losing
-              one (0.5 = no information; below 0.5 = LOWER values win more often)
-    payoff    rho = rank correlation with the trade's return at 1x leverage (sizing removed)
-    q-values  p-values adjusted for testing all features together (Benjamini-Hochberg)
-    bottom/top_bps  average 1x return of trades in the lowest and highest fifth of the feature
-    years_same_sign years in which rho has the same sign as overall
-    Trades on the same day are not independent, so p-values are somewhat optimistic."""
     from scipy.stats import mannwhitneyu, spearmanr
     rows = {}
     for f in features:
@@ -278,7 +222,6 @@ def feature_screen(trades: pd.DataFrame, features: list[str]) -> pd.DataFrame:
 
 
 def worst_trade_patterns(trades: pd.DataFrame, flags: dict[str, pd.Series], k: int = 50) -> pd.DataFrame:
-    """How often each pattern appears among the k worst trades vs all trades."""
     worst = trades["contribution"].nsmallest(k).index
     return pd.DataFrame({
         "worst_trades": {name: flag.loc[worst].mean() for name, flag in flags.items()},

@@ -1,4 +1,4 @@
-"""Shared helpers: a small synthetic market shaped exactly like the processed tables."""
+"""Shared test fixtures: a synthetic market and the real data."""
 
 import numpy as np
 import pandas as pd
@@ -10,18 +10,13 @@ from src.data.clean import build_daily_table
 
 def make_market(n_days: int = 30, seed: int = 0, dividend_days: dict | None = None,
                 last_day: np.ndarray | None = None):
-    """Random-walk minute bars for n_days full sessions + the matching daily table.
-
-    last_day: optional 390 closes for the final day, as multiples of that day's open,
-    to script an exact intraday path after a random warm-up.
-    """
     rng = np.random.default_rng(seed)
     dates = pd.bdate_range("2021-01-04", periods=n_days)
     frames, price = [], 100.0
     for i, date in enumerate(dates):
         scripted = last_day is not None and i == n_days - 1
         if not scripted:
-            price *= 1 + rng.normal(0, 0.005)  # overnight gap (none on the scripted day)
+            price *= 1 + rng.normal(0, 0.005)
         ts = pd.date_range(f"{date:%Y-%m-%d} 09:30", periods=390, freq="min", tz=NY_TZ)
         if scripted:
             close = price * np.asarray(last_day, dtype=float)
@@ -50,7 +45,6 @@ def make_market(n_days: int = 30, seed: int = 0, dividend_days: dict | None = No
 
 @pytest.fixture(scope="session")
 def real_market():
-    """First ~60 trading days of the real processed data (skips if not built yet)."""
     files = processed_files("SPY")
     if not files["minute"].exists():
         pytest.skip("processed data not built; run scripts/02_build_dataset.py")

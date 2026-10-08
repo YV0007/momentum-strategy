@@ -1,19 +1,15 @@
-"""All report figures. (Phases 4-8)
-
-Colors follow one fixed assignment so a strategy has the same color in every chart:
-paper versions take the first categorical slots, benchmarks are neutral grays.
-"""
+"""All report figures."""
 
 import textwrap
 
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import pandas as pd  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
-from src.config import FIGURES_DIR  # noqa: E402
+from src.config import FIGURES_DIR
 
 COLORS = {
     "final": "#2a78d6", "vwap_stop": "#eb6834", "base": "#1baf7a", "own": "#4a3aa7",
@@ -49,7 +45,6 @@ def _save(fig, name: str) -> None:
 
 
 def equity_curves(returns: dict[str, pd.Series], title: str, name: str) -> None:
-    """Growth of $1, log scale, with the final value labeled at the line end."""
     fig, ax = plt.subplots(figsize=(10, 5))
     for key, ret in returns.items():
         equity = (1 + ret).cumprod()
@@ -81,9 +76,6 @@ def drawdowns(returns: dict[str, pd.Series], title: str, name: str) -> None:
 
 
 def metric_bars(table: pd.DataFrame, title: str, name: str) -> None:
-    """The brief's three required metrics side by side. table: rows = strategies,
-    columns include sharpe, annual_return, annual_volatility; an optional 'period' level
-    in the index (strategy, period) draws one bar per period."""
     metrics = [("sharpe", "Sharpe ratio", "{:.2f}"), ("annual_return", "Annualized return", "{:.1%}"),
                ("annual_volatility", "Annualized volatility", "{:.1%}")]
     has_periods = isinstance(table.index, pd.MultiIndex)
@@ -91,7 +83,7 @@ def metric_bars(table: pd.DataFrame, title: str, name: str) -> None:
     periods = table.index.get_level_values(1).unique() if has_periods else [None]
     width = 0.8 / len(periods)
 
-    stacked = len(strategies) > 5          # many bars: one full-width panel per metric
+    stacked = len(strategies) > 5
     fig, axes = plt.subplots(3, 1, figsize=(12, 11)) if stacked else plt.subplots(1, 3, figsize=(13, 4.2))
     for ax, (col, label, fmt) in zip(axes, metrics):
         for p_i, period in enumerate(periods):
@@ -123,8 +115,6 @@ def metric_bars(table: pd.DataFrame, title: str, name: str) -> None:
 
 def sweep_bars(tables: dict[str, pd.DataFrame], metrics: list[tuple[str, str, str]], title: str, name: str,
                highlight=None) -> None:
-    """Paper Figs. 8-10 style: one panel per metric, one bar group per parameter value (the
-    tables' index), one bar per period (the dict keys). `highlight` = the paper's setting."""
     periods = list(tables)
     values = tables[periods[0]].index
     width = 0.8 / len(periods)
@@ -169,7 +159,6 @@ def placebo_histogram(placebo_sharpes: pd.Series, real_sharpe: float, p_value: f
 
 
 def monthly_heatmap(ret: pd.Series, title: str, name: str) -> None:
-    """Monthly returns, diverging red-gray-blue, symmetric around 0, values printed."""
     monthly = (1 + ret).groupby([ret.index.year, ret.index.month]).prod() - 1
     table = monthly.unstack()
     lim = np.nanmax(np.abs(table.values))
@@ -186,13 +175,10 @@ def monthly_heatmap(ret: pd.Series, title: str, name: str) -> None:
     _save(fig, name)
 
 
-# ---------------------------------------------------------------- checkpoint diagnostics (Phase 5)
-
 SIDE_COLORS = {"long": "#eda100", "short": "#e87ba4"}
 
 
 def bucket_panels(panels: dict[str, pd.DataFrame], title: str, name: str, key: str = "final") -> None:
-    """Mean daily return (bps) with 95% interval for each bucket; one panel per variable."""
     fig, axes = plt.subplots(1, len(panels), figsize=(max(3.6 * len(panels), 11), 3.9), sharey=True)
     for ax, (label, t) in zip(np.atleast_1d(axes), panels.items()):
         x = np.arange(len(t))
@@ -209,7 +195,6 @@ def bucket_panels(panels: dict[str, pd.DataFrame], title: str, name: str, key: s
 
 
 def time_of_day_bars(table: pd.DataFrame, title: str, name: str) -> None:
-    """Gross P&L of each half-hour holding leg with 95% interval, and costs below zero."""
     fig, ax = plt.subplots(figsize=(10, 3.9))
     x = np.arange(len(table))
     ax.bar(x, table["gross_bps"], 0.62, color=COLORS["final"], label="Gross P&L of the leg")
@@ -226,7 +211,6 @@ def time_of_day_bars(table: pd.DataFrame, title: str, name: str) -> None:
 
 
 def side_contribution_lines(contrib: pd.DataFrame, title: str, name: str) -> None:
-    """Cumulative (summed) daily contribution of long and short trades, labeled at the end."""
     fig, ax = plt.subplots(figsize=(10, 4))
     total = contrib.sum(axis=1).cumsum()
     ax.plot(total.index, total, color=COLORS["final"], lw=1.6, label="Total")
@@ -244,7 +228,6 @@ def side_contribution_lines(contrib: pd.DataFrame, title: str, name: str) -> Non
 
 
 def yearly_bars(table: pd.DataFrame, title: str, name: str) -> None:
-    """Yearly return of the final strategy next to SPY buy & hold."""
     fig, ax = plt.subplots(figsize=(10, 3.9))
     x = np.arange(len(table))
     for offset, (col, key) in zip([-0.2, 0.2], [("return", "final"), ("spy_return", "buy_and_hold")]):
@@ -262,7 +245,6 @@ def yearly_bars(table: pd.DataFrame, title: str, name: str) -> None:
 
 
 def payoff_scatter(strategy_ret: pd.Series, spy_intraday: pd.Series, title: str, name: str) -> None:
-    """Strategy daily return against SPY's open-to-close move: trend following shows a smile."""
     fig, ax = plt.subplots(figsize=(7, 5))
     ax.scatter(spy_intraday, strategy_ret, s=10, color=COLORS["final"], alpha=0.45, linewidths=0)
     bins = pd.qcut(spy_intraday, 15)
@@ -280,10 +262,8 @@ def payoff_scatter(strategy_ret: pd.Series, spy_intraday: pd.Series, title: str,
 
 
 def _draw_day(ax, minute: pd.DataFrame, minute_feats: pd.DataFrame, trades: pd.DataFrame, day) -> None:
-    """Price, noise area, VWAP, decision times and trades of one day on one axis
-    (triangle up = long entry, triangle down = short entry, x = exit)."""
     bars = minute[minute["date"] == day].join(minute_feats[["upper", "lower", "vwap"]])
-    t = bars.index.tz_localize(None) + pd.Timedelta(minutes=1)   # row = state at END of bar
+    t = bars.index.tz_localize(None) + pd.Timedelta(minutes=1)
     ax.fill_between(t, bars["lower"], bars["upper"], color="#e4e3df", label="Noise area")
     ax.plot(t, bars["close"], color=TEXT, lw=1, label="SPY")
     ax.plot(t, bars["vwap"], color=COLORS["vwap_stop"], lw=1, label="VWAP")
@@ -301,7 +281,6 @@ def _draw_day(ax, minute: pd.DataFrame, minute_feats: pd.DataFrame, trades: pd.D
 
 def day_panels(minute: pd.DataFrame, minute_feats: pd.DataFrame, trades: pd.DataFrame,
                day_returns: pd.Series, title: str, name: str) -> None:
-    """Intraday charts of a few days with the strategy's trades, two per row."""
     days = list(day_returns.index)
     rows = int(np.ceil(len(days) / 2))
     fig, axes = plt.subplots(rows, 2, figsize=(12, 3.4 * rows), squeeze=False)
@@ -318,8 +297,6 @@ def day_panels(minute: pd.DataFrame, minute_feats: pd.DataFrame, trades: pd.Data
 
 def noise_area_explainer(minute: pd.DataFrame, minute_feats: pd.DataFrame, daily: pd.DataFrame,
                          trades: pd.DataFrame, day: str, name: str, lookback: int = 14) -> None:
-    """How the past sets today's band: the previous `lookback` days' absolute moves from the
-    open (thin lines) average into sigma (thick line), which becomes today's noise area."""
     day = pd.Timestamp(day)
     prev_days = daily.index[(daily.index < day) & daily["is_valid"]][-lookback:]
     fig, (left, right) = plt.subplots(1, 2, figsize=(13, 4.3))
@@ -346,12 +323,11 @@ def noise_area_explainer(minute: pd.DataFrame, minute_feats: pd.DataFrame, daily
 
 
 def leverage_timeline(vol_daily: pd.Series, leverage: pd.Series, cap: float, title: str, name: str) -> None:
-    """Past volatility sets the size: 14-day daily vol (top) and the resulting leverage (bottom)."""
     fig, (top, bottom) = plt.subplots(2, 1, figsize=(10, 5), sharex=True)
     top.plot(vol_daily.index, vol_daily, color=COLORS["buy_and_hold"], lw=1.2)
     top.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0, decimals=1))
     top.set_title("14-day volatility of daily returns (known at the open)", loc="left", fontsize=10)
-    lev = leverage.where(leverage > 0)                     # hide non-trading days
+    lev = leverage.where(leverage > 0)
     bottom.plot(lev.index, lev, color=COLORS["final"], lw=1.0)
     bottom.axhline(cap, color=MUTED, ls="--", lw=1)
     bottom.annotate(f"cap {cap:g}x", (lev.index[0], cap), xytext=(0, 4), textcoords="offset points",
@@ -364,7 +340,6 @@ def leverage_timeline(vol_daily: pd.Series, leverage: pd.Series, cap: float, tit
 
 
 def replication_chart(monthly: pd.DataFrame, title: str, name: str) -> None:
-    """Our monthly returns vs the paper's: growth of $1 (left) and month-by-month scatter (right)."""
     fig, (left, right) = plt.subplots(1, 2, figsize=(13, 4.6), gridspec_kw={"width_ratios": [1.6, 1]})
     growth = (1 + monthly[["ours", "paper"]]).cumprod()
     higher = growth.iloc[-1].idxmax()
@@ -389,7 +364,6 @@ def replication_chart(monthly: pd.DataFrame, title: str, name: str) -> None:
 
 
 def pnl_split_chart(split: pd.DataFrame, title: str, name: str) -> None:
-    """Per year: share of trend days (opportunity), earnings on them (capture), losses on the rest (cost)."""
     years = split.drop("all")
     panels = [("opportunity", "Opportunity: days closing outside the noise area", True),
               ("capture_bps", "Capture: mean return on those days, bps", False),
@@ -414,8 +388,6 @@ def pnl_split_chart(split: pd.DataFrame, title: str, name: str) -> None:
 
 
 def feature_screen_chart(screen: pd.DataFrame, title: str, name: str, q_max: float = 0.05) -> None:
-    """Rank correlation of each entry feature with the trade's 1x return; bars that pass the
-    multiple-testing correction are drawn solid, the rest faded and labeled 'n.s.'."""
     s = screen.sort_values("rho")
     fig, ax = plt.subplots(figsize=(9, 0.45 * len(s) + 1.2))
     y = np.arange(len(s))

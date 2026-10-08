@@ -1,18 +1,4 @@
-"""The paper's variations and further investigations, on the train and the test period. (Phase 8)
-
-    python -m scripts.07_robustness
-
-Nothing here is a candidate: the paper's settings stay as they are, and every run is logged with
-note "robustness: ..." or "ablation" (not counted as a trial by the Deflated Sharpe).
-1. Paper versions: every stop rule at 1x and with volatility sizing (Tables 1-3, Fig. 5a, FAQ Q22)
-2. Sweeps of the final strategy: volatility multiplier (4.4, Fig. 9), noise-area lookback (FAQ Q6)
-3. Costs: commission levels (4.6, Fig. 10), IB tiered commission (4.6), I-Star impact (FAQ Q15)
-4. Conditional results of the final strategy: VIX at the open (4.1, Fig. 8), daily patterns
-   (4.2, Table 5), weekday (4.3, Table 6)
-5. Trades and legs: Table 4, profit per share by year (Q23), long/short legs (Q5), short trades
-   vs VIX (Q19, Q20), shorts only below moving averages (Q21), SPY's worst quarters (Q7)
-Writes results/robustness_report.md and results/figures/robustness_*.png.
-"""
+"""Runs the paper's variations on train and test."""
 
 from dataclasses import replace
 
@@ -40,13 +26,10 @@ COUNTS = {"trades", "observations", "short_trades"}
 
 
 def side_by_side(tables: dict[str, pd.DataFrame], cols: list[str]) -> pd.DataFrame:
-    """One row per variant, `cols` for each period next to each other."""
     return pd.concat({period: t[cols] for period, t in tables.items()}, axis=1)
 
 
 def md(df: pd.DataFrame) -> str:
-    """Markdown with rates as percentages and counts as integers (by column name, or by the
-    metric level of side-by-side columns)."""
     def fmt(col: pd.Series) -> pd.Series:
         name = col.name[-1] if isinstance(col.name, tuple) else col.name
         if name in RATES:
@@ -69,7 +52,6 @@ def main() -> None:
     last_day = f"{data.daily.index[-1]:%Y-%m-%d}"
 
     def sweep(variants: dict, label: str) -> dict[str, pd.DataFrame]:
-        """variants: value -> (strategy config, research config). One summary row per value and period."""
         tables = {}
         for period, (start, end) in periods.items():
             rows = {}
@@ -79,7 +61,6 @@ def main() -> None:
             tables[period] = pd.DataFrame(rows).T
         return tables
 
-    # ---- 1. paper versions
     ladder = load_strategies("ablation.yaml")
     versions = {p: run_ablation(ladder, research, data, p, start, end) for p, (start, end) in periods.items()}
     described = versions["train"].apply(lambda r: f"{r.name}: {r['stop']} stop, {r['sizing']}", axis=1)
@@ -88,7 +69,6 @@ def main() -> None:
                       .swaplevel().loc[list(versions["train"].index.drop("SPY open-to-close"))],
                       "Paper versions: train (solid) and test (faded)", "robustness_paper_versions")
 
-    # ---- 2. parameter sweeps and 3. costs
     vm = sweep({v: (replace(final, name=f"final_vm_{v:g}", vm=v), research) for v in VM_VALUES}, "VM")
     lookback = sweep({n: (replace(final, name=f"final_lookback_{n}", lookback=n), research) for n in LOOKBACKS},
                      "lookback")
@@ -104,7 +84,6 @@ def main() -> None:
             ("commission", commission, 0.0035, "Commission per share, slippage $0.001 (paper Fig. 10)")]:
         plots.sweep_bars(tables, SWEEP_METRICS, title, f"robustness_{name}", paper_value)
 
-    # ---- 4. and 5. the final strategy, analysed as in the paper
     results = {p: run(final, research, data, start, end) for p, (start, end) in periods.items()}
     vix, patterns = data.daily["vix_open"], pt.daily_patterns(data.daily)
     vix_mean = (data.daily["vix_open"] + data.daily["vix_close"]) / 2

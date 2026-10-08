@@ -1,9 +1,4 @@
-"""Evaluate a set of strategies on one period, identically for train and test. (Phase 4)
-
-For each strategy: headline metrics, Sharpe standard error and bootstrap interval,
-alpha/beta vs SPY, placebo test, Deflated Sharpe. Plus the baselines and all figures,
-written to results/figures/ and results/<period>_report.md.
-"""
+"""Full evaluation of one period: metrics, statistics, figures and report."""
 
 import json
 
@@ -20,13 +15,9 @@ N_PLACEBO = 1000
 
 
 def trial_sharpes(period: str) -> list[float]:
-    """Daily Sharpe of every distinct strategy logged for this period (Deflated Sharpe). Counted
-    by name, not by parameter text: the config schema gained fields over time, so the same design
-    was logged with different parameter texts. Every new design gets a new name."""
     if not LOG_FILE.exists():
         return []
     log = pd.read_csv(LOG_FILE)
-    # ablation and robustness runs decompose or stress fixed designs; they are not candidates
     log = log[(log["period"] == period) & ~log["note"].fillna("").str.startswith(("ablation", "robustness"))]
     log = log.drop_duplicates("strategy", keep="last")
     return list(log["sharpe"] / np.sqrt(252))

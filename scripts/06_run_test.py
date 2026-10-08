@@ -1,17 +1,4 @@
-"""Evaluate the strategies on the TEST period (2023 onward) and the post-publication slice.
-(Phase 7)
-
-    python -m scripts.06_run_test      (run 03_run_backtests first)
-
-Every strategy evaluated here must already be frozen. The paper's versions qualify from the
-start (their rules come from the paper, nothing is tuned on our data); the own strategy is
-added once it is frozen. Every run is logged in results/experiment_log.csv.
-
-Also writes results/replication_report.md: our final strategy vs the paper's published monthly
-returns, over train and test together; and, for the own versions (SECOND use of the test period,
-see config/research.yaml), results/own_vs_final_test.md with the paired comparisons and the
-verdicts fixed in advance (docs/own_strategy_attempts.md).
-"""
+"""Evaluates all strategies on the test period."""
 
 import pandas as pd
 
@@ -21,11 +8,10 @@ from src.evaluation import metrics, replication, stats
 from src.evaluation.report import evaluate
 
 SHOW = ["total_return", "annual_return", "annual_volatility", "sharpe", "max_drawdown"]
-MAIN, CHALLENGER = "own_turbulence", "own_ml_vol"     # roles fixed before the test run
+MAIN, CHALLENGER = "own_turbulence", "own_ml_vol"
 
 
 def verdict(d: dict) -> str:
-    """The pre-registered reading of a paired Sharpe difference."""
     if d["ci_low"] > 0:
         return "improvement, 95% interval above zero"
     if d["difference"] > 0:
@@ -75,7 +61,6 @@ def main() -> None:
         print(f"\n{period.upper()} {start} -> {data.daily.index[-1]:%Y-%m-%d}")
         print(tables[period][SHOW].astype(float).round(3).to_string())
 
-    # ---- replication: final strategy over train + test vs the paper's monthly table
     daily = pd.concat([pd.read_parquet(BACKTEST_DIR / f"final_{p}_daily.parquet")["ret"] for p in ("train", "test")])
     print("\n" + replication.write_report(daily))
 

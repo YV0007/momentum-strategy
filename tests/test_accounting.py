@@ -1,4 +1,4 @@
-"""Bookkeeping invariants on a real-data backtest: money is neither created nor lost."""
+"""Account value, trades and leverage add up."""
 
 import pytest
 
@@ -51,6 +51,6 @@ def test_notional_never_exceeds_leverage_cap(result):
 def test_no_trading_on_invalid_or_warmup_days(result):
     result, _ = result
     d = result.daily
-    assert d.iloc[:11]["trades"].sum() == 0    # sigma needs >= 11 of the last 14 days
+    assert d.iloc[:11]["trades"].sum() == 0
     if "2019-08-12" in d.index:
         assert d.loc["2019-08-12", "trades"] == 0

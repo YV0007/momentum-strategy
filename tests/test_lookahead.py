@@ -1,11 +1,4 @@
-"""Look-ahead test: scramble everything after a cutoff moment and rebuild the features.
-Anything computed for a moment at or before the cutoff must not change.
-
-At a cutoff inside day D, these are still unknown and get scrambled:
-  - every minute bar after the cutoff (same day and later days),
-  - day D's end-of-day data: close, high, low, VIX close, validity flag,
-  - everything about later days, including their open, dividends and VIX open.
-"""
+"""Changing future data never changes past features."""
 
 import numpy as np
 import pandas as pd
@@ -45,7 +38,6 @@ def test_no_lookahead(real_market, day_i, minute_i, seed):
     base_min, base_day = features.build_features(minute, daily)
     pert_min, pert_day = features.build_features(*scramble_after(minute, daily, cutoff, seed))
 
-    # Sanity: the scramble really changed later features, so the test has teeth.
     assert not base_min.loc[base_min.index > cutoff, "vwap"].equals(pert_min.loc[pert_min.index > cutoff, "vwap"])
 
     known = base_min.index <= cutoff

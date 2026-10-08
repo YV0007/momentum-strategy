@@ -1,14 +1,4 @@
-"""Run and evaluate the paper's strategy versions, and the ablation ladder, on the TRAIN
-period. (Phases 3-4)
-
-    python -m scripts.03_run_backtests
-
-The test period is deliberately not run here; it is touched once, in 06_run_test.py.
-Only the paper's versions run here: the own versions are judged on train by 05_own_strategy.py,
-out of sample per walk-forward block (the ML model would be in-sample on the whole train period).
-Writes results/backtests/, results/figures/train_*.png, results/train_report.md and logs
-every run to results/experiment_log.csv.
-"""
+"""Backtests the paper's versions and the ablation on the train period."""
 
 from src.config import BACKTEST_DIR, RESULTS_DIR, load_research, load_strategies
 from src.engine.backtest import MarketData

@@ -1,4 +1,4 @@
-"""Multi-asset test (Phase 9): portfolio arithmetic and the pooled ML model's information set."""
+"""Portfolio maths and the pooled ML model."""
 
 import numpy as np
 import pandas as pd
@@ -38,12 +38,12 @@ def test_pooled_walk_forward_never_uses_the_block_it_forecasts_or_later():
     panel = decision_panel(data, KS)
     settings = ml_sizing.asset_settings()
     scrambled = panel.copy()
-    later = scrambled.index.get_level_values("date") >= folds[0][1][0]          # the first block and after
+    later = scrambled.index.get_level_values("date") >= folds[0][1][0]
     scrambled.loc[later, "target"] = np.random.default_rng(1).normal(size=later.sum())
     base = ml_sizing.walk_forward_pooled({"A": panel, "B": panel}, folds, settings)
     pert = ml_sizing.walk_forward_pooled({"A": panel, "B": scrambled}, folds, settings)
     first_block = data.daily.index.isin(folds[0][1])
     np.testing.assert_allclose(base["A"][first_block], pert["A"][first_block])
     np.testing.assert_allclose(base["B"][first_block], pert["B"][first_block])
-    second_block = data.daily.index.isin(folds[1][1])                     # trained on scrambled rows: must differ
+    second_block = data.daily.index.isin(folds[1][1])
     assert not np.allclose(base["B"][second_block], pert["B"][second_block], equal_nan=True)

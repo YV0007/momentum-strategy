@@ -1,4 +1,4 @@
-"""Diagnostics must decompose the backtest exactly, never invent or lose P&L."""
+"""Diagnostics reconcile with the backtest."""
 
 import numpy as np
 import pandas as pd

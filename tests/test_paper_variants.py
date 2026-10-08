@@ -1,4 +1,4 @@
-"""The paper's alternative cost models and daily patterns."""
+"""Alternative cost models and daily patterns."""
 
 from dataclasses import replace
 
@@ -39,7 +39,6 @@ def data():
 
 
 def test_fill_by_fill_accounting_matches_the_fast_path(data):
-    """With the tier never reached, the fill-by-fill path must reproduce the flat-cost results."""
     final = load_strategies()["final"]
     fast = run(final, R, data, "2016-01-01", "2017-12-31").daily
     slow = run(final, replace(R, commission_tiered=True), data, "2016-01-01", "2017-12-31").daily
@@ -51,22 +50,20 @@ def test_istar_backtest_reconciles(data):
     result = run(load_strategies()["final"], replace(R, slippage_model="istar"), data, "2016-01-01", "2017-12-31")
     d = result.daily
     assert result.trades["pnl"].sum() == pytest.approx((d["pnl_gross"] - d["costs"]).sum())
-    assert (d["costs"] >= d["shares_traded"] * R.commission - 1e-9).all()      # impact on top of commission
+    assert (d["costs"] >= d["shares_traded"] * R.commission - 1e-9).all()
 
 
 def test_daily_patterns_are_flagged_the_next_day():
-    """Hand-made days: d3 is an inside day, a triangle and an NR4; d4 is an outside day that opens
-    and closes near its high (big tail, strong closure). Each flag appears on the FOLLOWING day."""
     daily = pd.DataFrame({"high": [10.0, 11.0, 12.0, 10.9, 13.0, 12.0],
                           "low": [9.0, 9.5, 10.0, 10.5, 9.0, 11.0],
                           "open": [9.5, 10.0, 11.0, 10.7, 12.8, 11.5],
                           "close": [9.5, 10.25, 11.0, 10.7, 12.9, 11.5]},
                          index=pd.bdate_range("2024-01-01", periods=6))
     flagged_on = {name: list(col[col].index.day) for name, col in daily_patterns(daily).items()}
-    assert flagged_on["ID (inside day)"] == [5]          # d3 (Jan 4) -> flagged Jan 5
+    assert flagged_on["ID (inside day)"] == [5]
     assert flagged_on["Triangle"] == [5]
     assert flagged_on["NR4"] == [5]
-    assert flagged_on["OD (outside day)"] == [8]         # d4 (Jan 5) -> flagged Mon Jan 8
+    assert flagged_on["OD (outside day)"] == [8]
     assert flagged_on["Big tail"] == [8]
     assert flagged_on["Strong/weak closure"] == [8]
-    assert flagged_on["Trend day"] == []                 # needs 14 days of range history
+    assert flagged_on["Trend day"] == []

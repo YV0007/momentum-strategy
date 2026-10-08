@@ -1,11 +1,4 @@
-"""Build the processed minute and daily tables, the data-quality report and the strategy
-features for each symbol. (Phases 1-2; multi-asset universe Phase 9)
-
-    python -m scripts.02_build_dataset                    # every symbol in config/universe.yaml
-    python -m scripts.02_build_dataset --symbols SPY
-
-Writes data/processed/<SYMBOL>/ and the data-quality report results/data_quality/<SYMBOL>.md.
-"""
+"""Builds the clean tables, features and data-quality report."""
 
 import argparse
 
@@ -19,7 +12,7 @@ from src.data import clean, quality
 def build(symbol: str) -> None:
     raw = clean.load_raw_minutes(symbol)
     calendar = pd.read_parquet(RAW_DIR / "calendar.parquet")
-    calendar = calendar.loc[:raw.index.max().tz_localize(None).normalize()]   # sessions we have data for
+    calendar = calendar.loc[:raw.index.max().tz_localize(None).normalize()]
 
     minute = clean.build_minute_table(raw, calendar)
     daily = clean.build_daily_table(

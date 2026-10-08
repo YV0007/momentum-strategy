@@ -1,15 +1,4 @@
-"""Performance metrics on daily returns. (Phase 4; core set needed from Phase 3 on)
-
-Definitions (daily returns r, N = 252 trading days per year):
-  annual return      geometric: (prod(1 + r)) ** (N / days) - 1
-  annual volatility  std(r) * sqrt(N)
-  Sharpe ratio       (mean(r) - rf/N) / std(r) * sqrt(N)
-  max drawdown       largest peak-to-trough fall of the equity curve
-  hit ratio          share of traded days with a positive return
-  return at 10% vol  annual return after scaling daily returns to 10% annual volatility,
-                     so strategies with different leverage compare like for like
-                     (an ex-post comparison device, not a tradable strategy)
-"""
+"""Performance metrics from daily returns."""
 
 import numpy as np
 import pandas as pd
@@ -42,10 +31,9 @@ def return_at_vol(ret: pd.Series, target: float = 0.10, n: int = 252) -> float:
 
 
 def summary(daily: pd.DataFrame, n: int = 252, rf: float = 0.0) -> dict:
-    """Headline metrics from a backtest's daily table (strategy or baseline)."""
     ret = daily["ret"]
     traded = daily["trades"] > 0
-    if not traded.any():          # always-invested benchmark: every day counts
+    if not traded.any():
         traded[:] = True
     out = {
         "total_return": (1 + ret).prod() - 1,
@@ -61,6 +49,6 @@ def summary(daily: pd.DataFrame, n: int = 252, rf: float = 0.0) -> dict:
         "trades": int(daily["trades"].sum()),
         "days": len(daily),
     }
-    if "costs" in daily:   # costs as a share of gross trading profit
+    if "costs" in daily:
         out["cost_share_of_gross"] = daily["costs"].sum() / daily["pnl_gross"].sum()
     return out

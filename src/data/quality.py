@@ -1,10 +1,9 @@
-"""Data-quality checks on the processed tables, written as a markdown report. (Phase 1)"""
+"""Checks data quality and writes the report."""
 
 import pandas as pd
 
 from src.data.clean import MAX_FILLED_SHARE
 
-# A single 1-minute move larger than this is reported for manual inspection.
 OUTLIER_MOVE = 0.01
 
 
@@ -13,7 +12,6 @@ def _bps(x: pd.Series) -> pd.Series:
 
 
 def check(minute: pd.DataFrame, daily: pd.DataFrame) -> dict:
-    """Compute every check; returns plain numbers/tables for the report."""
     real = minute[~minute["is_filled"]]
     one_min_ret = real.groupby("date")["close"].pct_change()
     outliers = real.loc[one_min_ret.abs() > OUTLIER_MOVE, ["date", "minute", "open", "close", "volume"]]

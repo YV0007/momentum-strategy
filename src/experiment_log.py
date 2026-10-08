@@ -1,8 +1,4 @@
-"""Append every backtest run to results/experiment_log.csv. (Phase 0)
-
-The log is the honest count of how many configurations were tried, which the Deflated
-Sharpe Ratio (Phase 4) needs, and a record of what was looked at and when.
-"""
+"""Logs every backtest run to results/experiment_log.csv."""
 
 import json
 from dataclasses import asdict
@@ -18,7 +14,7 @@ LOG_FILE = RESULTS_DIR / "experiment_log.csv"
 def log_run(config: StrategyConfig, period: str, start: str, end: str, metrics: dict,
             note: str = "") -> None:
     params = asdict(config)
-    if params["intraday_sizing"] == "none":      # paper configs keep the same params text as earlier rows
+    if params["intraday_sizing"] == "none":
         for key in ("intraday_sizing", "size_floor", "size_cap"):
             params.pop(key)
     if params["lookback"] == 14:

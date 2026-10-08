@@ -1,4 +1,4 @@
-"""Project paths, data constants, and the YAML configs as dataclasses. (Phase 0)"""
+"""Project paths and the YAML configs as dataclasses."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,7 +15,7 @@ DOCS_DIR = ROOT / "docs"
 ENV_FILE = ROOT / ".env"
 
 SYMBOL = "SPY"
-START_DATE = "2016-01-01"  # first full year of Alpaca SIP history
+START_DATE = "2016-01-01"
 NY_TZ = "America/New_York"
 
 CONFIG_DIR = ROOT / "config"
@@ -25,20 +25,19 @@ FIGURES_DIR = RESULTS_DIR / "figures"
 
 @dataclass(frozen=True)
 class StrategyConfig:
-    """One strategy variant. Defaults are the paper's values."""
     name: str
-    stop: str = "band_vwap"           # "opposite_band" | "band" | "vwap" | "band_vwap"
-    sizing: str = "vol_target"        # "fixed" | "vol_target"
-    leverage: float = 1.0             # leverage for fixed sizing
-    gap_adjust: bool = True           # band around max/min(open, previous close), not just the open
-    vm: float = 1.0                   # volatility multiplier on the noise area
-    lookback: int = 14                # days in the noise-area average move (paper: 14; FAQ Q6 varies it)
-    target_vol: float = 0.02          # daily vol target for vol_target sizing
+    stop: str = "band_vwap"
+    sizing: str = "vol_target"
+    leverage: float = 1.0
+    gap_adjust: bool = True
+    vm: float = 1.0
+    lookback: int = 14
+    target_vol: float = 0.02
     max_leverage: float = 4.0
     first_decision: str = "10:00"
     decision_every_min: int = 30
-    intraday_sizing: str = "none"     # own versions: "none" | "turbulence" | "ml_vol" (engine/sizing.py)
-    size_floor: float = 0.5           # bounds of the intraday size multiplier
+    intraday_sizing: str = "none"
+    size_floor: float = 0.5
     size_cap: float = 1.5
 
     def __post_init__(self):
@@ -50,7 +49,6 @@ class StrategyConfig:
 
 @dataclass(frozen=True)
 class ResearchConfig:
-    """The fixed research rules from config/research.yaml."""
     train_start: str
     train_end: str
     test_start: str
@@ -60,8 +58,8 @@ class ResearchConfig:
     slippage: float
     trading_days: int
     risk_free_rate: float
-    commission_tiered: bool = False   # paper 4.6: lower IB rate once the trailing month exceeds 300k shares
-    slippage_model: str = "fixed"     # "fixed" ($/share) | "istar" (Kissell I-Star market impact, paper FAQ Q15)
+    commission_tiered: bool = False
+    slippage_model: str = "fixed"
 
     def __post_init__(self):
         assert self.slippage_model in ("fixed", "istar"), self.slippage_model
@@ -72,13 +70,11 @@ class ResearchConfig:
 
 
 def processed_files(symbol: str = SYMBOL) -> dict[str, Path]:
-    """Processed tables of one symbol: minute bars, daily table, minute and daily features."""
     folder = PROCESSED_DIR / symbol
     return {name: folder / f"{name}.parquet" for name in ("minute", "daily", "features_minute", "features_daily")}
 
 
 def load_universe() -> dict[str, str]:
-    """Symbols of the multi-asset test and their asset class (config/universe.yaml)."""
     return yaml.safe_load((CONFIG_DIR / "universe.yaml").read_text())
 
 

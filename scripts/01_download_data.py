@@ -1,12 +1,4 @@
-"""Download all raw data into data/raw/. (Phase 1; multi-asset universe Phase 9)
-
-    python -m scripts.01_download_data                    # every symbol in config/universe.yaml
-    python -m scripts.01_download_data --symbols SPY      # selected symbols
-    python -m scripts.01_download_data --force            # re-download years already on disk
-
-Minute bars come from Alpaca, official daily bars and dividends from Yahoo, VIX from CBOE.
-Finished years are skipped; the current year is always refreshed since it is still growing.
-"""
+"""Downloads all raw data."""
 
 import argparse
 import time
@@ -26,7 +18,7 @@ def main() -> None:
     RAW_DIR.mkdir(parents=True, exist_ok=True)
     today = pd.Timestamp.today().normalize()
     for symbol in args.symbols:
-        daily, dividends = yahoo.download_daily(symbol, START_DATE)       # refuses symbols that split
+        daily, dividends = yahoo.download_daily(symbol, START_DATE)
         daily.to_parquet(RAW_DIR / f"{symbol}_daily_yahoo.parquet")
         dividends.to_parquet(RAW_DIR / f"{symbol}_dividends_yahoo.parquet")
         for year in range(pd.Timestamp(START_DATE).year, today.year + 1):

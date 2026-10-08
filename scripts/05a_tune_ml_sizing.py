@@ -1,18 +1,4 @@
-"""Choose the ML volatility forecast's settings on the TRAIN period only. (Phase 6)
-
-    python -m scripts.05a_tune_ml_sizing            (report only)
-    python -m scripts.05a_tune_ml_sizing --write    (also write config/ml_sizing.yaml)
-
-Selection is judged on FORECAST accuracy (mean squared error of the log rest-of-day volatility in
-the walk-forward validation blocks), never on trading P&L, so the trading comparison in
-05_own_strategy.py is not tuned on directly. Regularization, in this order:
-  1. hyper-parameter grid (depth, iterations, leaf size, L2, monotone constraints); among the
-     settings within one paired standard error of the best, take the simplest (one-SE rule);
-  2. backward feature elimination: drop a feature while removing it costs < 0.25% of the error;
-  3. a finer grid on the remaining features that reaches beyond the edges of the first one
-     (shallower, fewer iterations, smaller leaves, stronger L2), one-SE rule.
-Writes results/ml_sizing_tuning.md.
-"""
+"""Chooses the ML model's settings on the train period."""
 
 import argparse
 import itertools
@@ -36,13 +22,11 @@ GRID = {"max_depth": [2, 3, 4], "max_iter": [150, 400], "min_samples_leaf": [50,
         "l2_regularization": [1.0, 10.0], "monotone": [True, False]}
 FINE_GRID = {"max_depth": [1, 2, 3], "max_iter": [50, 100, 150, 250], "min_samples_leaf": [20, 50, 100, 200],
              "l2_regularization": [1.0, 10.0, 30.0], "monotone": [True, False]}
-DROP_TOLERANCE = 0.0025      # a feature stays only if removing it raises the CV error by >= 0.25%
-HAR = ["log_rel_vol_so_far", "log_rel_vol_last30", "log_rel_vol_first30"]   # linear benchmark
+DROP_TOLERANCE = 0.0025
+HAR = ["log_rel_vol_so_far", "log_rel_vol_last30", "log_rel_vol_first30"]
 
 
 class CV:
-    """The walk-forward folds of the train period, as ready-made (X, y) arrays."""
-
     def __init__(self, panel: pd.DataFrame, days: pd.Index, entries: pd.MultiIndex):
         dates = panel.index.get_level_values("date")
         self.folds = []
@@ -52,7 +36,6 @@ class CV:
             self.folds.append((fit_rows, val_rows, val_rows.index.isin(entries)))
 
     def mse(self, predict) -> np.ndarray:
-        """Per-fold validation MSE of predict(fit_rows, val_rows) -> forecasts of the target."""
         return np.array([np.mean((v["target"] - predict(f, v)) ** 2) for f, v, _ in self.folds])
 
     def r2(self, predict, entries_only: bool = False) -> np.ndarray:
@@ -72,7 +55,6 @@ def gbt(s: MLSettings):
 
 
 def rule_forecast(fit_rows, val_rows):
-    """The turbulence rule's implicit forecast: the rest of the day as turbulent as so far."""
     return val_rows["log_rel_vol_so_far"].fillna(0.0).to_numpy()
 
 
@@ -82,7 +64,6 @@ def linear_forecast(fit_rows, val_rows):
 
 
 def complexity(s: MLSettings) -> tuple:
-    """Simplest first: monotone, shallow, few iterations, large leaves, strong L2."""
     return (not s.monotone, s.max_depth, s.max_iter, -s.min_samples_leaf, -s.l2_regularization)
 
 
@@ -134,7 +115,6 @@ def main() -> None:
     panel = decision_panel(data, ks)
     panel = panel[panel.index.get_level_values("date").isin(days)]
 
-    # decision points where the final strategy actually entered a trade (forecast quality there matters most)
     trades = run(final, research, data, research.train_start, research.train_end).trades
     j = trades["entry_time"].map({t: i for i, t in enumerate(clock(ks))})
     entries = pd.MultiIndex.from_arrays([trades["date"], j])
@@ -151,7 +131,6 @@ def main() -> None:
     final_s, grid3 = grid_search(cv, s2.features, FINE_GRID)
     print("  chosen:", {k: getattr(final_s, k) for k in GRID})
 
-    # ---- forecast quality, out of sample in each validation block
     models = {"constant (train mean)": lambda f, v: np.full(len(v), f["target"].mean()),
               "rule: vol so far": rule_forecast, "linear (HAR-style)": linear_forecast,
               "GBT, all features (stage 1)": gbt(s1), "GBT, final settings": gbt(final_s)}
@@ -160,7 +139,6 @@ def main() -> None:
                                    "R2 at trade entries": cv.r2(p, entries_only=True).mean()}
                             for name, p in models.items()}).T
 
-    # ---- what the final model uses (fitted on the whole train period, importance on train rows)
     model = ml_sizing.fit(panel, days, final_s)
     rows = panel[panel["target"].notna()].sample(8000, random_state=0)
     imp = permutation_importance(model, rows[list(final_s.features)], rows["target"], n_repeats=5, random_state=0)

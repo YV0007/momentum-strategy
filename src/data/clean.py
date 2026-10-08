@@ -1,18 +1,9 @@
-"""Turn raw downloads into the two tables every later phase uses. (Phase 1)
-
-spy_minute.parquet  one row per regular-session minute (09:30 -> session close),
-                    gaps filled so every day has a complete minute grid.
-spy_daily.parquet   one row per trading day: official open/close, session info,
-                    dividends, data-quality flags, VIX.
-
-No features are computed here (noise bands, VWAP, ... live in src/features.py).
-"""
+"""Builds the clean minute and daily tables from the raw downloads."""
 
 import pandas as pd
 
 from src.config import NY_TZ, RAW_DIR, SYMBOL
 
-# A day is unusable if more than this share of its minutes had to be filled.
 MAX_FILLED_SHARE = 0.05
 
 
@@ -25,10 +16,6 @@ def load_raw_minutes(symbol: str = SYMBOL) -> pd.DataFrame:
 
 
 def session_grid(calendar: pd.DataFrame) -> pd.DatetimeIndex:
-    """Every regular-session minute of every trading day, as bar-start timestamps.
-
-    A day closing at 16:00 has 390 bars (09:30 ... 15:59); a 13:00 half-day has 210.
-    """
     minutes = []
     for date, row in calendar.iterrows():
         day = f"{date:%Y-%m-%d}"
@@ -39,11 +26,6 @@ def session_grid(calendar: pd.DataFrame) -> pd.DatetimeIndex:
 
 
 def build_minute_table(raw: pd.DataFrame, calendar: pd.DataFrame) -> pd.DataFrame:
-    """Regular-session bars on a complete minute grid.
-
-    Missing minutes (no trade printed) become flat bars at the last close with zero volume,
-    and are flagged with is_filled. A missing first minute takes the next available open.
-    """
     grid = session_grid(calendar)
     df = raw.reindex(grid)
     df["is_filled"] = df["close"].isna()
@@ -57,22 +39,13 @@ def build_minute_table(raw: pd.DataFrame, calendar: pd.DataFrame) -> pd.DataFram
         df[col] = df[col].fillna(fill_price)
     df[["volume", "trades"]] = df[["volume", "trades"]].fillna(0).astype("int64")
 
-    df["minute"] = df.groupby("date").cumcount()  # 0 = 09:30 bar
+    df["minute"] = df.groupby("date").cumcount()
     return df[["date", "minute", "open", "high", "low", "close", "volume", "trades",
                "vwap_bar", "is_filled"]]
 
 
 def build_daily_table(minute: pd.DataFrame, official: pd.DataFrame, calendar: pd.DataFrame,
                       dividends: pd.DataFrame, vix: pd.DataFrame) -> pd.DataFrame:
-    """One row per trading day.
-
-    open/high/low come from the minute bars (open = first 09:30 bar, as in the paper).
-    close is the official closing-auction price (Yahoo); the last minute bar can miss the
-    auction by a lot on extreme days, so last_bar_close is kept separately. If the official
-    close is missing for a day, the last bar close is used instead.
-    prev_close_adj removes the dividend from the previous close on ex-dates, so the
-    ex-dividend drop is not mistaken for an overnight gap.
-    """
     by_day = minute.groupby("date")
     daily = pd.DataFrame({
         "open": by_day["open"].first(),
@@ -101,11 +74,9 @@ def build_daily_table(minute: pd.DataFrame, official: pd.DataFrame, calendar: pd
 
 
 def add_returns(daily: pd.DataFrame) -> pd.DataFrame:
-    """Previous close (raw and dividend-adjusted) and daily returns from open/close/dividend."""
     daily = daily.copy()
     daily["prev_close"] = daily["close"].shift(1)
     daily["prev_close_adj"] = daily["prev_close"] - daily["dividend"]
-    # Total return close-to-close (dividend added back) and intraday open-to-close.
     daily["ret_cc"] = (daily["close"] + daily["dividend"]) / daily["prev_close"] - 1
     daily["ret_oc"] = daily["close"] / daily["open"] - 1
     return daily

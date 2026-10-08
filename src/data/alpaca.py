@@ -1,10 +1,4 @@
-"""Download SPY data from Alpaca: 1-minute bars and the trading calendar. (Phase 1)
-
-Raw files are saved untouched (all sessions incl. extended hours, unadjusted prices);
-cleaning happens in clean.py. Alpaca's daily bars and dividend records were
-checked and found unreliable (wrong closes on volatile days, missing ex-dates),
-so official closes and dividends come from yahoo.py instead.
-"""
+"""Downloads 1-minute bars and the trading calendar from Alpaca."""
 
 import os
 import time
@@ -34,7 +28,6 @@ def _session() -> requests.Session:
 
 
 def _get(session: requests.Session, url: str, params: dict) -> dict | list:
-    """GET with retries on rate limits (429) and transient server errors."""
     for attempt in range(MAX_RETRIES):
         resp = session.get(url, params=params, timeout=60)
         if resp.status_code == 429 or resp.status_code >= 500:
@@ -49,7 +42,6 @@ def _get(session: requests.Session, url: str, params: dict) -> dict | list:
 
 def fetch_bars(session: requests.Session, symbol: str, timeframe: str,
                start: pd.Timestamp, end: pd.Timestamp) -> pd.DataFrame:
-    """All bars in [start, end), following pagination. Unadjusted, consolidated (SIP) feed."""
     params = {"timeframe": timeframe, "start": start.isoformat(), "end": end.isoformat(),
               "limit": 10_000, "adjustment": "raw", "feed": "sip", "sort": "asc"}
     rows = []
@@ -66,10 +58,8 @@ def fetch_bars(session: requests.Session, symbol: str, timeframe: str,
 
 
 def download_minute_bars(symbol: str, year: int) -> pd.DataFrame:
-    """One calendar year of 1-minute bars, fetched month by month."""
     session = _session()
     start = pd.Timestamp(f"{year}-01-01", tz="UTC")
-    # The free plan cannot query the most recent 15 minutes of SIP data.
     end = min(pd.Timestamp(f"{year + 1}-01-01", tz="UTC"),
               pd.Timestamp.now(tz="UTC") - pd.Timedelta(minutes=20))
     months = list(pd.date_range(start, end, freq="MS")) + [end]
@@ -79,7 +69,6 @@ def download_minute_bars(symbol: str, year: int) -> pd.DataFrame:
 
 
 def download_calendar(start: str, end: str) -> pd.DataFrame:
-    """NYSE trading days with session open/close times (captures half-days)."""
     rows = _get(_session(), f"{TRADING_URL}/v2/calendar", {"start": start, "end": end})
     df = pd.DataFrame(rows)[["date", "open", "close"]]
     df["date"] = pd.to_datetime(df["date"])

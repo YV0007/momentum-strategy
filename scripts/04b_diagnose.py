@@ -1,12 +1,4 @@
-"""Own-version research, Stage 1: diagnose the final strategy on the TRAIN period only.
-
-    python -m scripts.04b_diagnose
-
-1. P&L split by year: opportunity (trend days) x capture (earnings on them) + cost (other days)
-2. Trade level: which features known at entry separate good trades from bad ones
-3. The 50 worst trades: which patterns are over-represented, plus charts to read by hand
-Writes results/diagnose_report.md and results/figures/diagnose_*.png.
-"""
+"""Finds which trades fail on the train period."""
 
 import numpy as np
 import pandas as pd
@@ -39,17 +31,14 @@ def main() -> None:
     days = result.daily.index
     daily = data.daily.loc[days]
 
-    # ---- 1. P&L split by year
     expansion = dg.expansion_ratio(daily, data.minute_feats)
     split = dg.pnl_split(result.daily["ret"], expansion, prep.leverage, daily["ret_oc"])
 
-    # ---- 2. trade level
     trades = trade_features.build(prep, result, data)
     screen = dg.feature_screen(trades, FEATURES)
     by_entry = trades.groupby("entry_time")["return_1x"].agg(["size", "mean"]).rename(
         columns={"size": "trades", "mean": "avg_1x_bps"}).assign(avg_1x_bps=lambda t: t["avg_1x_bps"] * dg.BPS)
 
-    # ---- 3. worst trades
     day_move = trades["date"].map(daily["ret_oc"])
     after_14 = trades["exit_time"].isin(["14:30", "15:00", "15:30", "close"])
     turbulent = trades["rel_realized_vol"] > trades["rel_realized_vol"].quantile(0.8)
@@ -76,7 +65,6 @@ def main() -> None:
                                            "rel_opening_range", "gap_with_trade", "vix_open"]]
     worst_table.index = worst_table.index.strftime("%Y-%m-%d")
 
-    # ---- figures
     plots.pnl_split_chart(split, "Final strategy by year: opportunity, capture, cost (train)", "diagnose_pnl_split")
     plots.feature_screen_chart(screen, "Which conditions at entry go with better trades? (train)", "diagnose_features")
     worst_days = worst.drop_duplicates("date")["date"].head(6)

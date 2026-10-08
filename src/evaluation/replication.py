@@ -1,8 +1,4 @@
-"""How closely our backtest reproduces the paper's published numbers. (Phase 3/7)
-
-Reference: the paper's FAQ Q24 monthly return table for the final strategy, transcribed to
-config/paper_monthly_returns.csv. Both series are net of costs.
-"""
+"""Compares our returns with the paper's published monthly returns."""
 
 import numpy as np
 import pandas as pd
@@ -13,14 +9,12 @@ from src.config import CONFIG_DIR, RESULTS_DIR
 
 
 def paper_monthly() -> pd.Series:
-    """Paper's monthly returns (decimal), indexed by month-end date."""
     df = pd.read_csv(CONFIG_DIR / "paper_monthly_returns.csv", comment="#")
     index = pd.to_datetime(dict(year=df["year"], month=df["month"], day=1)) + pd.offsets.MonthEnd(0)
     return pd.Series(df["return_pct"].values / 100, index=index, name="paper")
 
 
 def paper_yearly() -> pd.Series:
-    """Compounded calendar-year returns of the paper's full years."""
     monthly = paper_monthly()
     counts = monthly.groupby(monthly.index.year).size()
     full = counts[counts == 12].index
@@ -33,8 +27,6 @@ def to_monthly(daily_ret: pd.Series) -> pd.Series:
 
 
 def alignment(daily_ret: pd.Series, last_full_month: str = "2025-01-31") -> tuple[pd.DataFrame, dict]:
-    """Monthly ours vs paper over the shared months, plus agreement statistics: is there a bias
-    (mean difference, regression slope vs 1) and how large is the tracking error?"""
     m = pd.concat([to_monthly(daily_ret).rename("ours"), paper_monthly()], axis=1, join="inner")
     m = m.loc[:last_full_month]
     diff = m["ours"] - m["paper"]
@@ -51,7 +43,6 @@ def alignment(daily_ret: pd.Series, last_full_month: str = "2025-01-31") -> tupl
 
 
 def write_report(daily_ret: pd.Series) -> str:
-    """results/replication_report.md and results/figures/replication.png for the final strategy."""
     m, st = alignment(daily_ret)
     periods = {"Train 2016–2022": slice("2016", "2022"), "Test Jan 2023–Jan 2025": slice("2023", "2025-01"),
                "All shared months": slice(None)}

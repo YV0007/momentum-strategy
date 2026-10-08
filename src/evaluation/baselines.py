@@ -1,13 +1,4 @@
-"""Benchmarks the strategy must beat. (Phase 4)
-
-buy_and_hold   SPY held throughout, dividends included, no costs (one trade).
-open_to_close  long SPY every day from the 09:30 open to the close, 1x, with costs: the
-               "just being in the market intraday" return, which the strategy must beat to
-               show its timing adds anything.
-placebo        the strategy's exact trades (same days, times, holding periods, sizing, costs)
-               but each trade's direction is a coin flip. If the real strategy does not beat
-               most placebo runs, its direction calls carry no information.
-"""
+"""Benchmarks: buy & hold, open-to-close and the random-direction placebo."""
 
 import numpy as np
 import pandas as pd
@@ -33,19 +24,17 @@ def open_to_close(daily: pd.DataFrame, research: ResearchConfig) -> pd.DataFrame
 
 
 def random_direction(position: np.ndarray, rng: np.random.Generator) -> np.ndarray:
-    """Keep every trade's timing and length, flip each trade's sign with probability 1/2."""
     prev = np.hstack([np.zeros((position.shape[0], 1)), position[:, :-1]])
     starts = (position != 0) & (position != prev)
-    trade_id = np.cumsum(starts.ravel()).reshape(position.shape)   # same id along a trade
+    trade_id = np.cumsum(starts.ravel()).reshape(position.shape)
     signs = rng.choice([-1.0, 1.0], size=trade_id.max() + 1)
     return np.where(position != 0, np.abs(position) * signs[trade_id], 0.0)
 
 
 def placebo(prep: Prepared, research: ResearchConfig, n_runs: int = 200,
             seed: int = 0) -> pd.DataFrame:
-    """Daily returns of n_runs random-direction versions of the strategy (one column each)."""
     rng = np.random.default_rng(seed)
-    position = prep.positions()          # own versions: random direction, same sizes
+    position = prep.positions()
     runs = {i: simulate(prep, random_direction(position, rng), research, with_trades=False).daily["ret"]
             for i in range(n_runs)}
     return pd.DataFrame(runs)

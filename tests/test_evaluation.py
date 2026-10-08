@@ -1,4 +1,4 @@
-"""Metrics, statistics and the placebo, checked on cases with known answers."""
+"""Metrics, Sharpe statistics, placebo and folds."""
 
 import numpy as np
 import pandas as pd
@@ -9,7 +9,7 @@ from src.evaluation.split import walk_forward_folds
 
 
 def test_metrics_on_a_known_series():
-    ret = pd.Series([0.01, -0.01] * 126)                   # one year, alternating
+    ret = pd.Series([0.01, -0.01] * 126)
     assert metrics.annual_volatility(ret) == pytest.approx(ret.std() * np.sqrt(252))
     assert metrics.max_drawdown(pd.Series([0.1, -0.5, 0.2])) == pytest.approx(0.5)
     assert metrics.annual_return(pd.Series([0.0] * 252)) == 0
@@ -34,8 +34,8 @@ def test_random_direction_keeps_timing_and_size_of_every_trade():
     position = np.array([[0, 1, 1, 0, -1, -1, 1], [0, 0, 0, 0, 0, 0, 0], [-1, -1, -1, 1, 1, 0, 0]], float)
     for seed in range(20):
         flipped = baselines.random_direction(position, np.random.default_rng(seed))
-        assert np.array_equal(np.abs(flipped), np.abs(position))       # same timing and size
-        assert flipped[0, 1] == flipped[0, 2] and flipped[0, 4] == flipped[0, 5]   # one sign per trade
+        assert np.array_equal(np.abs(flipped), np.abs(position))
+        assert flipped[0, 1] == flipped[0, 2] and flipped[0, 4] == flipped[0, 5]
 
 
 def test_placebo_p_value():

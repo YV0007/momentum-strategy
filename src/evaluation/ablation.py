@@ -1,10 +1,4 @@
-"""Ablation: the final strategy built up one decision at a time. (Phase 3)
-
-Each row of the table describes what the version does (band reference, stop, sizing) next to
-its net results, so the contribution of every decision can be read off step by step.
-Ablation runs are logged with note="ablation"; they decompose a fixed design rather than
-compete as candidates, so the Deflated Sharpe does not count them as trials.
-"""
+"""Builds the final strategy up one decision at a time."""
 
 import pandas as pd
 

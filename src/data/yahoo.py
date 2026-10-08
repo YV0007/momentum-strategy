@@ -1,10 +1,4 @@
-"""Official daily open/close and dividends from Yahoo Finance. (Phase 1)
-
-Used as the independent reference for the daily table: Yahoo's close is the official
-closing-auction price and its dividend history is complete (Alpaca's is not).
-Prices are unadjusted. The pipeline does not handle splits, so a symbol that split after the
-start date is refused (none of SPY or the multi-asset universe has split since 2016).
-"""
+"""Downloads official daily prices and dividends from Yahoo."""
 
 import pandas as pd
 import requests
@@ -20,7 +14,6 @@ def _to_dates(epoch_seconds) -> pd.DatetimeIndex:
 
 
 def download_daily(symbol: str, start: str) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Returns (daily bars indexed by date, dividends indexed by ex-date)."""
     params = {"period1": int(pd.Timestamp(start, tz="UTC").timestamp()),
               "period2": int(pd.Timestamp.now(tz="UTC").timestamp()),
               "interval": "1d", "events": "div,split"}

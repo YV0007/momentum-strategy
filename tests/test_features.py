@@ -1,4 +1,4 @@
-"""Each feature checked against a slow, obvious re-implementation of the paper's formula."""
+"""Features match a brute-force version of the paper's formulas."""
 
 import numpy as np
 import pandas as pd
@@ -32,7 +32,6 @@ def test_sigma_skips_invalid_days(market):
     bad_day = daily.index[10]
     daily.loc[bad_day, "is_valid"] = False
     sigma = features.noise_sigma(minute, daily, lookback=14)
-    # Day 15's window is days 1..14 and contains the bad day: only 13 days are averaged.
     day, m = daily.index[15], 100
     moves = [abs(minute.loc[minute["date"] == d, "close"].iloc[m] / daily.loc[d, "open"] - 1)
              for d in daily.index[1:15] if d != bad_day]
@@ -45,7 +44,7 @@ def test_bands_use_gap_and_dividend_adjusted_close(market):
     minute, daily = market
     sigma = features.noise_sigma(minute, daily)
     bands = features.noise_bands(minute, daily, sigma, vm=1.5)
-    for day in [daily.index[20], pd.Timestamp("2021-01-25")]:  # second one is ex-dividend
+    for day in [daily.index[20], pd.Timestamp("2021-01-25")]:
         o, pc = daily.loc[day, "open"], daily.loc[day, "prev_close_adj"]
         row = (minute["date"] == day) & (minute["minute"] == 200)
         s = sigma[row].item()

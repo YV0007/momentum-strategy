@@ -1,15 +1,4 @@
-"""Compare the own versions with the paper's final strategy, inside the TRAIN period only. (Phase 6)
-
-    python -m scripts.05_own_strategy                         (own_turbulence and own_ml_vol)
-    python -m scripts.05_own_strategy --candidate own_turbulence
-
-Every number for the ML version is out of sample: in each walk-forward block it is sized by a
-model fitted only on the days before that block, so it has no result for the first two train
-years. The rule has no fitted parameters and is shown on the whole train period as well.
-Shows the walk-forward blocks together and one by one, each year, and a cost stress test, with a
-paired block bootstrap of every Sharpe difference. The test period is never touched here.
-Writes results/own_vs_final_train.md and results/figures/own_train_*.png.
-"""
+"""Compares the own versions with the final strategy on the train period."""
 
 import argparse
 from dataclasses import replace
@@ -26,7 +15,7 @@ from src.evaluation.split import walk_forward_folds
 from src.experiment_log import log_run
 from src.strategies import ml_sizing
 
-STRESS_SLIPPAGE = 0.005          # $/share, the level independent replications assume (vs our 0.001)
+STRESS_SLIPPAGE = 0.005
 
 
 def block_metrics(ret: pd.Series) -> dict:
@@ -54,7 +43,6 @@ def main() -> None:
     blocks_days = pd.DatetimeIndex(np.concatenate([val for _, val in folds]))
     names = ["final", *args.candidate]
 
-    # ---- size multipliers: the rule's from the config, the ML's from walk-forward fits
     multipliers = {}
     for name in args.candidate:
         cfg = strategies[name]
@@ -62,7 +50,7 @@ def main() -> None:
             with np.errstate(divide="ignore", invalid="ignore"):
                 forecast = ml_sizing.walk_forward_forecast(data, decision_minutes(cfg), folds)
                 multipliers[name] = sizing.clip_multiplier(1 / forecast, cfg)
-    oos_only = {name for name in multipliers}            # no result before the first block
+    oos_only = {name for name in multipliers}
 
     def backtest(name: str, research_cfg=research):
         prep = prepare(strategies[name], data, start, end, multiplier=multipliers.get(name))
@@ -72,14 +60,13 @@ def main() -> None:
     ret = {name: r.daily["ret"] for name, r in results.items()}
     stressed = {name: backtest(name, replace(research, slippage=STRESS_SLIPPAGE)).daily["ret"] for name in names}
 
-    for name in args.candidate:     # the ML has no whole-train result: its own period label, so the
-        if name in oos_only:        # Deflated Sharpe never compares Sharpes from different windows
+    for name in args.candidate:
+        if name in oos_only:
             log_run(strategies[name], "train_blocks", str(blocks_days[0].date()), end,
                     metrics.summary(results[name].daily.loc[blocks_days]), note="ML fitted before each block")
         else:
             log_run(strategies[name], "train", start, end, metrics.summary(results[name].daily))
 
-    # ---- 1. headline: the walk-forward blocks together (every version out of sample there)
     rows = []
     for name in names:
         rows.append({"version": name, "period": "blocks 2018–2022", **block_metrics(ret[name].loc[blocks_days]),
@@ -95,7 +82,6 @@ def main() -> None:
     pair_lines = [f"- {b} vs {a} (blocks 2018–2022): Sharpe difference "
                   f"{gain(ret[b].loc[blocks_days], ret[a].loc[blocks_days])}" for a, b in pairs]
 
-    # ---- 2. each walk-forward block and each year
     per_block = pd.DataFrame({
         f"block {i}: {val[0]:%Y-%m}–{val[-1]:%Y-%m}": {f"sharpe {n}": metrics.sharpe(ret[n].loc[val]) for n in names}
         for i, (_, val) in enumerate(folds, 1)}).T
@@ -108,7 +94,6 @@ def main() -> None:
         if n in oos_only:
             per_year.loc[per_year.index < blocks_days[0].year, [f"sharpe {n}", f"gain {n}"]] = np.nan
 
-    # ---- 3. cost stress and sizing profile
     stress = pd.DataFrame([{"version": n, "sharpe at $0.001": metrics.sharpe(ret[n].loc[blocks_days]),
                             f"sharpe at ${STRESS_SLIPPAGE}": metrics.sharpe(stressed[n].loc[blocks_days]),
                             "gain vs final at stress [95% CI]": "" if n == "final" else
@@ -124,7 +109,6 @@ def main() -> None:
                         "max leverage used": peak.max()})
     profile = pd.DataFrame(profile)
 
-    # ---- figures and report
     plots.equity_curves({n: ret[n].loc[blocks_days] for n in names},
                         "Own versions vs final, walk-forward blocks 2018–2022 (train)", "own_train_equity")
     plots.drawdowns({n: ret[n].loc[blocks_days] for n in names},
