@@ -11,12 +11,14 @@ The project does three things:
 2. **Tests whether the strategy still works out of sample.** From 2023 to October 2026 it earns a
    Sharpe ratio of 1.12 with a beta near zero, but SPY buy & hold did better (1.42). Since the
    paper's publication in May 2024, the Sharpe has fallen to 0.44.
-3. **Proposes my own version.** Whether a breakout will work turned out to be unpredictable, but how
-   volatile the rest of the day will be is not: volatility so far today predicts it with a rank
-   correlation of 0.71. So each trade is sized at entry by today's realized volatility relative to
-   its 14-day normal at the same time of day, a rule with no fitted parameters, frozen before the
-   test. On the test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from
-   18.8% to 11.5%.
+3. **Proposes my own version.** Training an ML model to predict whether a breakout will play out did
+   not work: its AUC of 0.46–0.54 is no better than a coin flip. Predicting volatility, in contrast,
+   turned out to be highly useful: volatility so far today predicts the rest of the day's volatility
+   with a rank correlation of 0.71, and a gradient-boosting model forecasts it with an out-of-sample
+   R² of 0.54. So each trade is sized at entry by today's realized volatility relative to its 14-day
+   normal at the same time of day, a rule with no fitted parameters, frozen before the test. On the
+   test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from 18.8% to
+   11.5%. Sizing by the gradient-boosting forecast instead reached 1.22, so the simpler rule stayed.
 
 ## Results at a glance
 
