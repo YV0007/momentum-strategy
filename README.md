@@ -152,14 +152,6 @@ HAR-style model.
   exits, dividend-adjusted gaps, half-days, and days with bad data excluded.
 - **61 tests**, including brute-force checks of every feature and scripted days with known trades.
 
-## Limitations
-
-- SPY buy & hold had a higher Sharpe than every version on the test period. The strategy's value is
-  as a near-zero-beta diversifier, not a replacement for holding SPY.
-- Since the paper's publication (May 2024) the final strategy's Sharpe is 0.44 (Own A: 0.57).
-- Data starts in 2016 (Alpaca), so the paper's 2007–2015 years, including 2008, are not covered.
-- The test period was used twice, and the own versions' gain is not statistically significant.
-
 ## Project layout
 
 ```
