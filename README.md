@@ -67,9 +67,7 @@ calm, slowly rising markets (2016–2017).
 
 Our backtest of the final strategy against the paper's published monthly returns (FAQ Q24), January
 2016 – January 2025: correlation 0.988, regression slope 0.999, mean monthly difference −0.02%
-(no bias), tracking error 2.2% a year. The paper's example days (Figures 2, 4 and 5) are reproduced
-trade by trade, except one VWAP exit that comes half an hour later because of a small difference in
-the data ([`tests/test_paper_days.py`](tests/test_paper_days.py)).
+(no bias), tracking error 2.2% a year.
 
 ![Our backtest vs the paper](docs/results/figures/replication.png)
 
