@@ -168,7 +168,7 @@ config/      research rules, strategy settings, ML settings (YAML)
 src/         all logic: data, features, engine (backtest, rules, sizing, costs), ML, evaluation, plots
 scripts/     one command per step, run in order 01 → 07
 tests/       pytest: features, look-ahead, scripted days, accounting, paper days
-docs/        every own-strategy attempt, paper coverage, results snapshot
+docs/        every own-strategy attempt, results snapshot
 ```
 
 Every strategy is the same engine with different settings in

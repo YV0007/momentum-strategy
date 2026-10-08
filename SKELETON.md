@@ -88,6 +88,5 @@ SPY_Momentum_str/
 │
 └── docs/
     ├── own_strategy_attempts.md # every own version tried, its numbers and why it was kept or retired
-    ├── paper_coverage.md        # every element of the paper: implemented where, result vs paper
     └── results/                 # snapshot of the key reports and figures from results/
 ```
