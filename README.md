@@ -85,8 +85,7 @@ at entry and held to exit, between 0.5× and 1.5×, total leverage ≤ 4×:
 - **Own A, `own_turbulence`:** size = 1 / (realized volatility so far today ÷ its
   14-day normal at the same time of day).
 - **Own B, `own_ml_vol`:** size = 1 / a gradient-boosting forecast of rest-of-day
-  volatility. Settings chosen on train by forecast accuracy only, never by trading profit; fitted
-  once on 2016–2022 and frozen.
+  volatility, fitted once on 2016–2022 and frozen.
 
 **Testing.** Both were compared with the final strategy in four walk-forward blocks (2018–2022):
 Own A +0.28 Sharpe [+0.06, +0.49], Own B +0.24 [+0.04, +0.44]. Both were then frozen in git and run
