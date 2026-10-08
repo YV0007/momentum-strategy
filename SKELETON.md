@@ -7,8 +7,7 @@ SPY_Momentum_str/
 │
 ├── README.md                    # hypothesis, method, results, how to run
 ├── SKELETON.md                  # this file
-├── requirements.txt             # libraries
-├── .env.example                 # template for Alpaca keys (real .env is gitignored)
+├── requirements.txt             # libraries; the .env format for the Alpaca keys is in its header
 ├── .gitignore                   # .env, data/, results/, caches
 │
 ├── config/

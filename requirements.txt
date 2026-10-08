@@ -1,4 +1,9 @@
 # Tested with Python 3.13 (needs 3.11+). Install: pip install -r requirements.txt
+#
+# Alpaca API keys (free account) go in a file named .env in the project root, never committed:
+#   ALPACA_API_KEY=your_key_id_here
+#   ALPACA_SECRET_KEY=your_secret_here
+#
 pandas==2.3.3
 numpy==2.3.5
 scipy==1.16.3

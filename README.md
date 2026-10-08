@@ -177,11 +177,12 @@ Every strategy is the same engine with different settings in
 ## How to run
 
 Market data is not included (about 1.4 GB, and the providers' terms do not allow redistributing it).
-It is downloaded with a free [Alpaca](https://alpaca.markets) account.
+It is downloaded with a free [Alpaca](https://alpaca.markets) account: put its API key and secret in
+a file named `.env` in the project root, in the two-line format shown at the top of
+[`requirements.txt`](requirements.txt).
 
 ```bash
 pip install -r requirements.txt
-cp .env.example .env                                  # add your Alpaca API key and secret
 python -m scripts.01_download_data --symbols SPY      # minute bars, daily bars, dividends, VIX, calendar
 python -m scripts.02_build_dataset --symbols SPY      # clean tables + features
 python -m scripts.03_run_backtests                    # paper versions + ablation, train period
