@@ -83,7 +83,7 @@ fifth of trades carried 41% of the risk and earned 7% of the profit.
 at entry and held to exit, between 0.5× and 1.5×, total leverage ≤ 4×:
 
 - **Own A, `own_turbulence`:** size = 1 / (realized volatility so far today ÷ its
-  14-day normal at the same time of day). No fitted parameters.
+  14-day normal at the same time of day).
 - **Own B, `own_ml_vol`:** size = 1 / a gradient-boosting forecast of rest-of-day
   volatility. Settings chosen on train by forecast accuracy only, never by trading profit; fitted
   once on 2016–2022 and frozen.
