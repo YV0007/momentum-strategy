@@ -6,13 +6,19 @@ extension that sizes each trade by how turbulent the day has been so far.
 
 The project does three things:
 
-1. **Replicates the papers start** Sucssefuel accomplsihed our monthly returns track the paper's published
-   ones with a correlation of 0.988.
-2. **Tests wether the strategy still work out of sample?** On 2023 – Oct 2026 it earns a Sharpe ratio of
-   1.12 with a beta near zero, but SPY buy & hold did better (1.42), and since the paper's
-   publication (May 2024) the Sharpe is 0.44.
-3. ** Pruposition of my own version of th strat?** The idea lies on the advancesd sizing each trade by intraday turbulence which allowed to raised the Sharpe from 1.12 to
-   1.35 on the test period and cut the max drawdown from 18.8% to 11.5%.
+1. **Replicates the paper.** Rebuilt from raw minute data, our monthly returns track the paper's
+   published ones with a correlation of 0.988.
+2. **Tests whether the strategy still works out of sample.** From 2023 to October 2026 it earns a
+   Sharpe ratio of 1.12 with a beta near zero, but SPY buy & hold did better (1.42). Since the
+   paper's publication in May 2024, the Sharpe has fallen to 0.44.
+3. **Proposes my own version.** Whether a breakout will work turned out to be unpredictable, but how
+   volatile the rest of the day will be is not: volatility so far today predicts it with a rank
+   correlation of 0.71. So each trade is sized at entry by today's realized volatility relative to
+   its 14-day normal at the same time of day, a rule with no fitted parameters, frozen before the
+   test. On the test period it raised the Sharpe from 1.12 to 1.35 and cut the maximum drawdown from
+   18.8% to 11.5%. A gradient-boosting challenger with monotone constraints forecast volatility more
+   accurately (R² 0.54 vs 0.46) but traded worse, so the simple rule stayed. The gain matches the
+   one on the train period.
 
 ## Results at a glance
 
