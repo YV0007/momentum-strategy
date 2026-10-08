@@ -98,6 +98,44 @@ of the gain came in 2026, a partial year. Own B: +0.10, and significantly worse 
 (−0.13 [−0.24, −0.02]). The full research log is in
 [`docs/own_version_research.md`](docs/own_version_research.md).
 
+### The gradient-boosting model behind Own B
+
+**What it predicts.** At each decision time (10:00, 10:30 … 15:30), the volatility of the rest of
+the day relative to normal: `log(realized volatility from the fill to the close ÷ its 14-day normal
+at the same time of day)`. "Normal" is the average over the previous 14 valid days at that time,
+the same idea as the noise area. The trade's size is 1 / the forecast, clipped to 0.5–1.5. The model
+never sees trade direction or profit. It trains on every (day, decision time) of the train period,
+about 21,000 rows, not only the ~1,500 trades.
+
+**Features.** All are known at the decision time and scale-free (relative to the day's own normal),
+built in [`src/intraday.py`](src/intraday.py). Backward elimination kept a feature only if removing
+it raised the cross-validated error by at least 0.25%:
+
+| Feature | Meaning | Used |
+|:--|:--|:--:|
+| `log_rel_vol_so_far` | realized volatility from the open to the decision vs normal | ✓ |
+| `log_rel_vol_last30` | realized volatility of the last 30 minutes vs normal | ✓ |
+| `log_rel_volume_so_far` | volume since the open vs normal at this time of day | ✓ |
+| `log_vix_vs_realized` | VIX (as a daily volatility) vs the 14-day realized daily volatility | ✓ |
+| `log_rel_vol_first30` | realized volatility of the first 30 minutes vs normal | dropped |
+| `log_rel_opening_range` | high − low of the first 30 minutes vs normal | dropped |
+| `log_rel_volume_30m` | volume of the last 30 minutes vs the same 30 minutes normally | dropped |
+| `vix_open` | VIX level at the open | dropped |
+| `log_rel_band_width` | today's noise-band width vs its own ~1-year average | dropped |
+| `abs_gap_vol` | size of the overnight gap in units of daily volatility | dropped |
+| `decision_minute` | minutes after the open | dropped |
+
+**Model.** scikit-learn `HistGradientBoostingRegressor`, settings in
+[`config/ml_sizing.yaml`](config/ml_sizing.yaml): trees of depth 1 (an additive model with no
+interactions), 250 iterations, learning rate 0.05, at least 200 rows per leaf, L2 penalty 10. All
+four features have monotone constraints set from economics, not fitted: more volatility, volume or
+implied volatility so far can only mean more volatility later. Settings were chosen by walk-forward
+forecast error with the one-standard-error rule (the simplest setting within one standard error of
+the best), from grids of 72 and then 288 settings
+([`scripts/05a_tune_ml_sizing.py`](scripts/05a_tune_ml_sizing.py)). Out-of-sample R² of the forecast:
+0.54, against 0.46 for the rule's implicit forecast (volatility so far) and 0.54 for a linear
+HAR-style model.
+
 ## How the research was kept honest
 
 - **Rules before results.** Split dates, costs and success criteria were fixed in
