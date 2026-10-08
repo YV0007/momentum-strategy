@@ -18,6 +18,8 @@ The project does three things:
    relative to its 14-day normal at the same time of day. On the test period it raised the Sharpe
    from 1.12 to 1.35 and cut the maximum drawdown from 18.8% to 11.5%.
 
+The code structure, file by file, is described in [`SKELETON.md`](SKELETON.md).
+
 ## Results at a glance
 
 Net of costs ($0.0035 commission + $0.001 slippage per share on every fill), starting capital $100,000.
